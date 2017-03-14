@@ -93,8 +93,8 @@ int main(int argc, char * argv[])
       return(EXIT_FAILURE);
     }
 
-  double T;
-  double phi;
+  size_t ntOrbit;
+  double T, phi, dtOrbit;
   gsl_vector_view init;
   char fileName[256], srcPostfix[256], dstPostfix[256], contPostfix[256];
   FILE *srcStream, *srcStreamVecLeft, *srcStreamVecRight, *srcStreamExp,
@@ -129,17 +129,27 @@ int main(int argc, char * argv[])
   }
 
   // Loop over various parameters
-  size_t nCont = 11;
+  size_t nCont = 21;
+  double eta2Step, rStep, gammaStep;
   gsl_vector_uint *argContSel = gsl_vector_uint_alloc(nCont);
-  // double eta2Min = 0.5; double eta2Max = 0.7; size_t neta2 = 11;
-  // double rMin = 0.1; double rMax = 0.3; size_t nr = 11;
-  // double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 11;
-  double eta2Min = 0.54; double eta2Max = 0.7; size_t neta2 = 9;
-  double rMin = 0.24; double rMax = 0.3; size_t nr = 4;
-  double gammaMin = 0.44; double gammaMax = 0.5; size_t ngamma = 4;
-  double eta2Step = (eta2Max - eta2Min) / (neta2 - 1);
-  double rStep = (rMax - rMin) / (nr - 1);
-  double gammaStep = (gammaMax - gammaMin) / (ngamma - 1);
+  //double eta2Min = 0.5; double eta2Max = 0.55; size_t neta2 = 6;
+  double eta2Min = 0.56; double eta2Max = 0.6; size_t neta2 = 5;
+  //double eta2Min = 0.61; double eta2Max = 0.65; size_t neta2 = 5;
+  //double eta2Min = 0.66; double eta2Max = 0.7; size_t neta2 = 5;
+  double rMin = 0.19; double rMax = 0.3; size_t nr = 1;
+  double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 21;
+  if (neta2 == 1)
+    eta2Step = 0.;
+  else
+    eta2Step = (eta2Max - eta2Min) / (neta2 - 1);
+  if (nr == 1)
+    rStep = 0.;
+  else
+    rStep = (rMax - rMin) / (nr - 1);
+  if (ngamma == 1)
+    gammaStep = 0.;
+  else
+    gammaStep = (gammaMax - gammaMin) / (ngamma - 1);
   for (size_t ieta2 = 0; ieta2 < neta2; ieta2++) {
     p["eta2"] = eta2Min + eta2Step * ieta2;
     for (size_t ir = 0; ir < nr; ir++) {
@@ -184,7 +194,7 @@ int main(int argc, char * argv[])
 	sprintf(fileName, "%s/continuation/poExp/poExp%s.%s",
 		resDir, dstPostfix, fileFormat);
 	if (!(srcStreamExp = fopen(fileName, "rb"))) {
-	  fprintf(stderr, "Can't open %s for reading Floquet exponents: ",
+	  fprintf(stderr, "Can' open %s for reading Floquet exponents: ",
 		  fileName);
 	  perror("");
 	  continue;
@@ -222,9 +232,9 @@ int main(int argc, char * argv[])
 	      std::cout << "Computing phase diffusion coefficient for mu = "
 			<< p["mu"] << " with period " << T << std::endl;
 	      // Get total number of time steps in period
-	      nt = (size_t) (ceil(T / dt) + 0.1);
+	      ntOrbit = (size_t) (ceil(T / dt) + 0.1);
 	      // Get time step adapted to period
-	      dt = T / nt;
+	      dtOrbit = T / ntOrbit;
 	      // Get left and right Floquet vectors in the direction of
 	      // the flow (must have been sorted before)
 	      vLeft = gsl_matrix_complex_column(FloquetVecLeft, 0);
@@ -256,7 +266,8 @@ int main(int argc, char * argv[])
 	      if (verbose)
 		std::cout << "Integrating from 0 to " << T
 			  << "..." << std::endl;
-	      linMod->integrateRange(&init.vector, nt, dt, &xt, &Mts, 0);
+	      linMod->integrateRange(&init.vector, ntOrbit, dtOrbit,
+				     &xt, &Mts, 0);
 
 	      if (verbose) {
 		std::cout << "M(T, 0) = " << std::endl;
@@ -282,7 +293,7 @@ int main(int argc, char * argv[])
 	      if (verbose)
 		std::cout << "Compute phase diffusion..." << std::endl;
 	      phi = getPhaseDiffusion(&Qs, &Mts, &vLeftReal.vector,
-				      &vRightReal.vector, dt);
+				      &vRightReal.vector, dtOrbit);
 	      // if (verbose)
 	      std::cout << "phi = " << phi << std::endl;
 

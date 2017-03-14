@@ -13,9 +13,9 @@ configFile = '../cfg/coupledRO.cfg'
 cfg = pylibconfig2.Config()
 cfg.read_file(configFile)
 getModelParam(cfg)
-p["eta2"] = 0.5
-p["r"] = 0.1
-p["gamma"] = 0.3
+p["eta2"] = 0.56
+p["r"] = 0.18
+p["gamma"] = 0.4
 
 dim = cfg.model.dim
 dt = cfg.simulation.dt
@@ -63,7 +63,8 @@ print 'Reading states...'
 print 'Phase diffusion coefficient...'
 data = readFile(phiFileName).reshape(-1, 2)
 contSelRng = data[:, 0]
-phiRng = data[:, 1]
+phiRng = data[:, 1] / pdim['tadim2year']
+
 print 'phi = ', np.abs(phiRng)
             
 # Plot phase diffusion coefficient
@@ -74,7 +75,7 @@ ax.plot(contSelRng, np.abs(phiRng), linewidth=lw)
 ax.set_xlabel(r'$\mu$', fontsize=ergoPlot.fs_latex)
 ax.set_ylabel(r'$\Phi$', fontsize=ergoPlot.fs_latex)
 ax.set_xlim(np.min(contRng), np.max(contRng[-1]))
-#ax.set_ylim(0., 5.)
+ax.set_ylim(0., 20.)
 plt.setp(ax.get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
 plt.setp(ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
 fig.savefig('%s/continuation/phase/phaseDiffusion%s.%s' \

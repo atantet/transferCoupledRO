@@ -6,25 +6,16 @@ sys.path.append('../cfg/')
 from coupledRO import *
 from ergoInt import *
 
-configFile = '../cfg/coupledRO.cfg'
-cfg = pylibconfig2.Config()
-cfg.read_file(configFile)
-getModelParam(cfg)
 p["eta2"] = 0.5
 p["r"] = 0.1
 p["gamma"] = 0.3
 
 dim = cfg.model.dim
 fileFormat = cfg.general.fileFormat
-if (fileFormat == 'bin'):
-    readFile = np.fromfile
-else:
-    readFile = np.loadtxt
-srcPostfix = "_%s" % (cfg.model.caseName,)
 
 # List of continuations to plot
 initContRng = [0.]
-contStepRng = [0.001]
+contStepRng = [0.01]
 dtRng = [1.e-3]
 nCont = len(initContRng)
 
@@ -83,14 +74,14 @@ for k in np.arange(nCont):
         
     # Read fixed point and cont
     state = readFile(poFileName)
+    state = state.reshape(-1, dim+2)
     # Read FloquetExpenvalues
     FloquetExp = readFile(FloquetExpFileName)
-    state = state.reshape(-1, dim+2)
     FloquetExp = FloquetExp.reshape(-1, dim, 2)
     FloquetExp = FloquetExp[:, :, 0] + 1j * FloquetExp[:, :, 1]
     # Remove nans
     FloquetExp[np.isnan(FloquetExp)] \
-        = np.min(FloquetExp[~np.isnan(FloquetExp)]).real
+        = np.min(FloquetExp.real[~np.isnan(FloquetExp)])
 
     po = state[:, :dim]
     TRng = state[:, dim+1]

@@ -101,12 +101,22 @@ int main(int argc, char * argv[])
   
 
   // Loop over various parameters
-  double eta2Min = 0.5; double eta2Max = 0.7; size_t neta2 = 11;
-  double rMin = 0.1; double rMax = 0.3; size_t nr = 11;
-  double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 11;
-  double eta2Step = (eta2Max - eta2Min) / (neta2 - 1);
-  double rStep = (rMax - rMin) / (nr - 1);
-  double gammaStep = (gammaMax - gammaMin) / (ngamma - 1);
+  double eta2Step, rStep, gammaStep;
+  double eta2Min = 0.5; double eta2Max = 0.7; size_t neta2 = 21;
+  double rMin = 0.1; double rMax = 0.3; size_t nr = 21;
+  double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 21;
+  if (neta2 == 1)
+    eta2Step = 0.;
+  else
+    eta2Step = (eta2Max - eta2Min) / (neta2 - 1);
+  if (nr == 1)
+    rStep = 0.;
+  else
+    rStep = (rMax - rMin) / (nr - 1);
+  if (ngamma == 1)
+    gammaStep = 0.;
+  else
+    gammaStep = (gammaMax - gammaMin) / (ngamma - 1);
   for (size_t ieta2 = 0; ieta2 < neta2; ieta2++) {
     p["eta2"] = eta2Min + eta2Step * ieta2;
     for (size_t ir = 0; ir < nr; ir++) {

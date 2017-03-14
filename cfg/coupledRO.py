@@ -1,15 +1,9 @@
 import os
 import numpy as np
+import pylibconfig2
 import matplotlib.pyplot as plt
 import ergoPlot
 
-# Directories
-resDir = '../results/'
-contDir = '%s/continuation' % resDir
-plotDir = '%s/plot/' % resDir
-os.system("mkdir %s/continuation/fp/ 2> /dev/null" % plotDir)
-os.system("mkdir %s/continuation/po/ 2> /dev/null" % plotDir)
-os.system("mkdir %s/continuation/phase/ 2> /dev/null" % plotDir)
 
 pdim = {}
 p = {}
@@ -27,6 +21,95 @@ varName['hE'] = r'$h_E$'
 varName['tau'] = r'$\tau$'
 varName['w'] = r'$w$'
 varName['v'] = r'$v$'
+
+
+def getModelParam():
+  # Scales
+  pdim['L'] = cfg.model.L # (m) Width of the basin
+  pdim['Ly'] = cfg.model.Ly # (m) Meridional length
+  pdim['Hs'] = cfg.model.Hs # (m s^-2) External wind stress
+  pdim['c0'] = cfg.model.c0 # (m s^-1) Vel. of the 1st baroclin Kelvin mode
+  pdim['DeltaT'] = cfg.model.DeltaT # (K) Reference temperature difference
+  pdim['T0'] = cfg.model.T0 # (K) Radiative equilibrium temperature
+  pdim['tau0'] = cfg.model.tau0 # (K) Radiative equilibrium temperature
+  pdim['t'] = pdim['L'] / pdim['c0']
+
+  if cfg.model.adim:
+    # Adimensional parameters
+    p['alpha'] = cfg.model.alpha
+    p['deltas'] = cfg.model.deltas
+    p['eta1'] = cfg.model.eta1
+    p['eta2'] = cfg.model.eta2
+    p['gamma'] = cfg.model.gamma
+    p['r'] = cfg.model.r
+    p['xs0'] = cfg.model.xs0
+    p['tauExt'] = cfg.model.tauExt
+    p['w0'] = cfg.model.w0
+    p['epsh'] = cfg.model.epsh
+    p['sigmah'] = np.sqrt(cfg.model.sigmahInf2 * 2 * p['epsh'])
+         
+    # Dimensional parameters
+    pdim['Ts0'] = p['xs0'] * pdim['DeltaT'] + pdim['T0']
+    pdim['epsT'] = p['alpha'] / pdim['t']
+    pdim['Hm'] = p['eta1'] * pdim['Hs']
+    pdim['h0'] = p['eta2'] * pdim['Hs']
+    pdim['r'] = p['r'] / pdim['t']
+    pdim['b'] = p['gamma'] / pdim['L'] / pdim['tau0'] * pdim['Hm']
+    pdim['tauExt'] = p['tauExt'] * pdim['tau0']
+    pdim['w0'] = p['w0'] / pdim['t'] * pdim['Hm']
+    pdim['epsh'] = p['epsh'] / pdim['t']
+  else:
+    # Dimensional parameters
+    pdim['Ts0'] = cfg.model.Ts0 # (K) Thermocline reference temperature
+    pdim['Hm'] = cfg.model.Hm # (m) Mixed-layer depth
+    pdim['h0'] = cfg.model.h0
+    pdim['tau0'] = cfg.model.tau0 # (m s^-2) Reference wind stress
+    pdim['tauExt'] = cfg.model.tauExt # (m s^-2) External wind stress
+    pdim['epsT'] = cfg.model.epsT 
+    pdim['r'] = cfg.model.r
+    pdim['b'] = cfg.model.b
+    pdim['w0'] = cfg.model.w0
+    pdim['epsh'] = cfg.model.epsh
+    
+    # Adimensional parameters
+    p['alpha'] = pdim['epsT'] * pdim['t']
+    p['eta1'] = pdim['Hm'] / pdim['Hs']
+    p['eta2'] = pdim['h0'] / pdim['Hs']
+    p['r'] = pdim['r'] * pdim['t']
+    p['gamma'] = pdim['b'] * pdim['L'] * pdim['tau0'] / pdim['Hm']
+    p['xs0'] = (pdim['Ts0'] - pdim['T0']) / pdim['DeltaT']
+    p['tauExt'] = pdim['tauExt'] / pdim['tau0']
+    p['w0'] = pdim['w0'] * pdim['t'] / pdim['Hm']
+    p['epsh'] = pdim['epsh'] * pdim['t']
+    p['deltas'] = 1.
+    
+  if (hasattr(cfg.model, 'deltas')):
+    p['deltas'] = cfg.model.deltas
+  if (hasattr(cfg.model, 'mu')):
+    p['mu'] = cfg.model.mu
+  if (hasattr(cfg.model, 'sigmahInf2')):
+    p['sigmah'] = np.sqrt(cfg.model.sigmahInf2 * 2 * p['epsh'])
+    
+  pdim['tadim2year'] = pdim['t'] / day2sec / year2day
+
+
+configFile = '../cfg/coupledRO.cfg'
+cfg = pylibconfig2.Config()
+cfg.read_file(configFile)
+getModelParam()
+if (cfg.general.fileFormat == 'bin'):
+    readFile = np.fromfile
+else:
+    readFile = np.loadtxt
+srcPostfix = "_%s" % (cfg.model.caseName,)
+
+# Directories
+resDir = cfg.general.resDir
+contDir = '%s/continuation' % resDir
+plotDir = cfg.general.plotDir
+os.system("mkdir %s/continuation/fp/ 2> /dev/null" % plotDir)
+os.system("mkdir %s/continuation/po/ 2> /dev/null" % plotDir)
+os.system("mkdir %s/continuation/phase/ 2> /dev/null" % plotDir)
 
 
 # Nonlinearity
@@ -247,72 +330,3 @@ def plotDiagnosticVersusMu(diagnostic, muRng, stable=None):
   ax5.set_xlim(xlim)
       
   
-def getModelParam(cfg):
-  # Scales
-  pdim['L'] = cfg.model.L # (m) Width of the basin
-  pdim['Ly'] = cfg.model.Ly # (m) Meridional length
-  pdim['Hs'] = cfg.model.Hs # (m s^-2) External wind stress
-  pdim['c0'] = cfg.model.c0 # (m s^-1) Vel. of the 1st baroclin Kelvin mode
-  pdim['DeltaT'] = cfg.model.DeltaT # (K) Reference temperature difference
-  pdim['T0'] = cfg.model.T0 # (K) Radiative equilibrium temperature
-  pdim['tau0'] = cfg.model.tau0 # (K) Radiative equilibrium temperature
-  pdim['t'] = pdim['L'] / pdim['c0']
-
-  if cfg.model.adim:
-    # Adimensional parameters
-    p['alpha'] = cfg.model.alpha
-    p['deltas'] = cfg.model.deltas
-    p['eta1'] = cfg.model.eta1
-    p['eta2'] = cfg.model.eta2
-    p['gamma'] = cfg.model.gamma
-    p['r'] = cfg.model.r
-    p['xs0'] = cfg.model.xs0
-    p['tauExt'] = cfg.model.tauExt
-    p['w0'] = cfg.model.w0
-    p['epsh'] = cfg.model.epsh
-    p['sigmah'] = np.sqrt(cfg.model.sigmahInf2 * 2 * p['epsh'])
-         
-    # Dimensional parameters
-    pdim['Ts0'] = p['xs0'] * pdim['DeltaT'] + pdim['T0']
-    pdim['epsT'] = p['alpha'] / pdim['t']
-    pdim['Hm'] = p['eta1'] * pdim['Hs']
-    pdim['h0'] = p['eta2'] * pdim['Hs']
-    pdim['r'] = p['r'] / pdim['t']
-    pdim['b'] = p['gamma'] / pdim['L'] / pdim['tau0'] * pdim['Hm']
-    pdim['tauExt'] = p['tauExt'] * pdim['tau0']
-    pdim['w0'] = p['w0'] / pdim['t'] * pdim['Hm']
-    pdim['epsh'] = p['epsh'] / pdim['t']
-  else:
-    # Dimensional parameters
-    pdim['Ts0'] = cfg.model.Ts0 # (K) Thermocline reference temperature
-    pdim['Hm'] = cfg.model.Hm # (m) Mixed-layer depth
-    pdim['h0'] = cfg.model.h0
-    pdim['tau0'] = cfg.model.tau0 # (m s^-2) Reference wind stress
-    pdim['tauExt'] = cfg.model.tauExt # (m s^-2) External wind stress
-    pdim['epsT'] = cfg.model.epsT 
-    pdim['r'] = cfg.model.r
-    pdim['b'] = cfg.model.b
-    pdim['w0'] = cfg.model.w0
-    pdim['epsh'] = cfg.model.epsh
-    
-    # Adimensional parameters
-    p['alpha'] = pdim['epsT'] * pdim['t']
-    p['eta1'] = pdim['Hm'] / pdim['Hs']
-    p['eta2'] = pdim['h0'] / pdim['Hs']
-    p['r'] = pdim['r'] * pdim['t']
-    p['gamma'] = pdim['b'] * pdim['L'] * pdim['tau0'] / pdim['Hm']
-    p['xs0'] = (pdim['Ts0'] - pdim['T0']) / pdim['DeltaT']
-    p['tauExt'] = pdim['tauExt'] / pdim['tau0']
-    p['w0'] = pdim['w0'] * pdim['t'] / pdim['Hm']
-    p['epsh'] = pdim['epsh'] * pdim['t']
-    p['deltas'] = 1.
-    
-  if (hasattr(cfg.model, 'deltas')):
-    p['deltas'] = cfg.model.deltas
-  if (hasattr(cfg.model, 'mu')):
-    p['mu'] = cfg.model.mu
-  if (hasattr(cfg.model, 'sigmahInf2')):
-    p['sigmah'] = np.sqrt(cfg.model.sigmahInf2 * 2 * p['epsh'])
-    
-  pdim['tadim2year'] = pdim['t'] / day2sec / year2day
-

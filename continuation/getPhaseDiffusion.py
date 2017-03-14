@@ -13,9 +13,9 @@ configFile = '../cfg/coupledRO.cfg'
 cfg = pylibconfig2.Config()
 cfg.read_file(configFile)
 getModelParam(cfg)
-p["eta2"] = 0.5
-p["r"] = 0.1
-p["gamma"] = 0.3
+p["eta2"] = 0.6
+p["r"] = 0.18
+p["gamma"] = 0.4
 
 dim = cfg.model.dim
 dt = cfg.simulation.dt
@@ -126,12 +126,12 @@ for icont in np.arange(contSel.shape[0]):
         print 'Floquet exp ', eig, ' = ', FloquetExp[eig]
     print 'Phi = ', phiRng[icont], '\n'
     
-    # Plot diagnostic
-    diagnostic = diagnose(xt, p)
-    plotOrbit(diagnostic, p)
-    plt.savefig('%s/continuation/po/orbit/orbit%s.%s' \
-                % (plotDir, dstPostfixMu, ergoPlot.figFormat),
-                dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
+    # # Plot diagnostic
+    # diagnostic = diagnose(xt, p)
+    # plotOrbit(diagnostic, p)
+    # plt.savefig('%s/continuation/po/orbit/orbit%s.%s' \
+    #             % (plotDir, dstPostfixMu, ergoPlot.figFormat),
+    #             dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
 
 # Plot phase diffusion coefficient
 print phiRng
@@ -141,8 +141,8 @@ ax = fig.add_subplot(111)
 ax.plot(contSelRng, phiRng, linewidth=lw)
 ax.set_xlabel(r'$\mu$', fontsize=ergoPlot.fs_latex)
 ax.set_ylabel(r'$\Phi$', fontsize=ergoPlot.fs_latex)
-ax.set_xlim(np.min(contRng), np.max(contRng[-1]))
-#ax.set_ylim(0., 5.)
+ax.set_xlim(np.min(contRng), np.max(contRng))
+ax.set_ylim(0., 20.)
 plt.setp(ax.get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
 plt.setp(ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
 fig.savefig('%s/continuation/po/phaseDiffusion%s.%s' \
