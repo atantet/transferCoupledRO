@@ -25,20 +25,12 @@
  *  Vector field for the coupled recharge oscillator.
  */
 class coupledRO : public vectorField {
-  param p; 
-  
 public:
   /** \brief Constructor defining the model parameters. */
-  coupledRO(const param *p_) : vectorField(), p(*p_) { }
+  coupledRO(const param *p_) : vectorField(p_) { }
 
   /** \brief Destructor. */
   ~coupledRO() { }
-
-  /** \brief Return the parameters of the model. */
-  void getParameters(param *p_) { *p_ = p; return; }
-
-  /** \brief Set parameters of the model. */
-  void setParameters(const param *p_) { p = *p_; return; }
 
   /** \brief Evaluate the vector field of the coupled recharge oscillator
    *  for a given state. */
@@ -52,22 +44,13 @@ public:
  *  with respect to \f$\sigma\f$.
  */
 class coupledROCont : public vectorField {
-  param p;
-  
 public:
   /** \brief Constructor defining the model parameters. */
   coupledROCont(const param *p_)
-    : vectorField(), p(*p_) { }
+    : vectorField(p_) { }
 
   /** \brief Destructor. */
   ~coupledROCont() { }
-
-  /** \brief Return the parameters of the model. */
-  void getParameters(param *p_) { *p_ = p; return; }
-
-  /** \brief Set parameters of the model. */
-  void setParameters(const param *p_)
-  { p = *p_; return; }
 
   /** \brief Evaluate the vector field of the coupled recharge oscillator
    *  for a given state. */
@@ -80,25 +63,16 @@ public:
  *  Jacobian the coupled recharge oscillator.
  */
 class JacobianCoupledRO : public linearField {
-  
-  param p;
-
 public:
   /** \brief Construction by allocating matrix of the linear operator. */
-  JacobianCoupledRO(const param *p_) : linearField(DIM), p(*p_) { }
+  JacobianCoupledRO(const param *p_) : linearField(DIM, p_) { }
 
   /** \brief Construction by allocating matrix of the linear operator. */
   JacobianCoupledRO(const param *p_, const gsl_vector *state_)
-    : linearField(DIM), p(*p_) { setMatrix(state_); }
+    : linearField(DIM, p_) { setMatrix(state_); }
 
   /** \brief Destructor. */
   ~JacobianCoupledRO() { }
-
-  /** \brief Return the parameters of the model. */
-  void getParameters(param *p_) { *p_ = p; return; }
-
-  /** \brief Set parameters of the model. */
-  void setParameters(const param *p_) { p = *p_; return; }
 
   /** \brief Update the matrix of the linear operator after the state. */
   void setMatrix(const gsl_vector *x);
@@ -111,26 +85,17 @@ public:
  *  with respect to \f$\mu\f$.
  */
 class JacobianCoupledROCont : public linearField {
-  
-  param p;
-
 public:
   /** \brief Construction by allocating matrix of the linear operator. */
   JacobianCoupledROCont(const param *p_)
-    : linearField(DIM + 1), p(*p_) { }
+    : linearField(DIM + 1, p_) { }
 
   /** \brief Construction by allocating matrix of the linear operator. */
   JacobianCoupledROCont(const param *p_, const gsl_vector *state_)
-    : linearField(DIM + 1), p(*p_) { setMatrix(state_); }
+    : linearField(DIM + 1, p_) { setMatrix(state_); }
 
   /** \brief Destructor. */
   ~JacobianCoupledROCont() { }
-
-  /** \brief Return the parameters of the model. */
-  void getParameters(param *p_) { *p_ = p; return; }
-
-  /** \brief Set parameters of the model. */
-  void setParameters(const param *p_) { p = *p_; return; }
 
   /** \brief Update the matrix of the linear operator after the state. */
   void setMatrix(const gsl_vector *x);

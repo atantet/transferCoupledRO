@@ -1,29 +1,20 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pylibconfig2
 import sys
 sys.path.append('../cfg/')
 from coupledRO import *
 from ergoInt import *
 
-configFile = '../cfg/coupledRO.cfg'
-cfg = pylibconfig2.Config()
-cfg.read_file(configFile)
-getModelParam(cfg)
-p["eta2"] = 0.5
-p["r"] = 0.1
-p["gamma"] = 0.3
+p["eta2"] = 0.6
+p["r"] = 0.17
+p["gamma"] = 0.39
 
 dim = cfg.model.dim
 fileFormat = cfg.general.fileFormat
-if (fileFormat == 'bin'):
-    readFile = np.fromfile
-else:
-    readFile = np.loadtxt
 
 # List of continuations to plot
 initContRng = [0.]
-contStepRng = [0.001]
+contStepRng = [0.002]
 nCont = len(initContRng)
 
 srcPostfix = "_%s" % (cfg.model.caseName,)
@@ -64,7 +55,7 @@ for k in np.arange(nCont):
                  % (srcPostfix, int(p["eta2"] * 1000 + 0.1),
                     int(p["r"] * 1000 + 0.1), int(p["gamma"] * 1000 + 0.1),
                     contPostfix)
-    fpFileName = '%s/fpCont/fpCont%s.%s' % (contDir, dstPostfix, fileFormat)
+    fpFileName = '%s/fpState/fpState%s.%s' % (contDir, dstPostfix, fileFormat)
     eigValFileName = '%s/fpEigVal/fpEigValCont%s.%s' \
                      % (contDir, dstPostfix, fileFormat)
 
@@ -137,6 +128,6 @@ plt.setp(ax[0].get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
 plt.setp(ax[0].get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
 ax[-1].set_xlabel(r'$\rho$', fontsize=ergoPlot.fs_latex)
 
-plt.savefig('%s/continuation/fp/fpCont%s.%s' \
+fig.savefig('%s/continuation/fp/fpCont%s.%s' \
             % (plotDir, dstPostfix, ergoPlot.figFormat),
             dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)

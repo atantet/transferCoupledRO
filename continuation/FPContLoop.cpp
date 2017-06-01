@@ -8,14 +8,11 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_eigen.h>
-#include <libconfig.h++>
 #include <ODESolvers.hpp>
 #include <ODECont.hpp>
 #include <ODEFields.hpp>
 #include "../cfg/readConfig.hpp"
 #include "../cfg/coupledRO.hpp"
-
-using namespace libconfig;
 
 
 /** \file FPContLoop.cpp 
@@ -102,9 +99,9 @@ int main(int argc, char * argv[])
 
   // Loop over various parameters
   double eta2Step, rStep, gammaStep;
-  double eta2Min = 0.5; double eta2Max = 0.7; size_t neta2 = 21;
-  double rMin = 0.1; double rMax = 0.3; size_t nr = 21;
-  double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 21;
+  double eta2Min = 0.6; double eta2Max = 0.7; size_t neta2 = 1;
+  double rMin = 0.17; double rMax = 0.3; size_t nr = 1;
+  double gammaMin = 0.39; double gammaMax = 0.5; size_t ngamma = 1;
   if (neta2 == 1)
     eta2Step = 0.;
   else
@@ -129,7 +126,7 @@ int main(int argc, char * argv[])
    	sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s", srcPostfix,
 		(int) (p["eta2"] * 1000 + 0.1), (int) (p["r"] * 1000 + 0.1),
 		(int) (p["gamma"] * 1000 + 0.1), contPostfix);
-	sprintf(dstFileName, "%s/continuation/fpCont/fpCont%s.%s",
+	sprintf(dstFileName, "%s/continuation/fpState/fpState%s.%s",
 		resDir, dstPostfix, fileFormat);
 	if (!(dstStream = fopen(dstFileName, "w"))) {
 	  fprintf(stderr, "Can't open %s for writing states: ",

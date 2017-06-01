@@ -67,7 +67,7 @@ extern bool readGridMem;               //!< Whether to read the grid membership 
 extern size_t N;                       //!< Dimension of the grid
 extern gsl_vector_uint *nx;            //!< Number of grid boxes per dimension
 extern gsl_vector *gridLimitsLow;      //!< Grid limits
-extern gsl_vector *gridLimitsUp;       //!< Grid limits
+extern gsl_vector *gridLimitsHigh;       //!< Grid limits
 extern char gridLimitsType[32];        //!< Grid limits type
 extern size_t nLags;                   //!< Number of transition lags for which to calculate the spectrum
 extern gsl_vector *tauRng;             //!< Lags for which to calculate the spectrum
@@ -115,9 +115,7 @@ void readSpectrum(const Config *cfg);
 /** \brief Sparse all configuration sections. */
 void readConfig(const char *cfgFileName);
 
-/**
- * Free memory allocated during configuration.
- */
+/** \brief Free memory allocated during configuration. */
 void freeConfig();
 
 #endif

@@ -9,8 +9,8 @@ pdim = {}
 p = {}
 
 # Time conversion
-day2sec = 24 * 60 * 60
-year2day = 365
+day2sec = 24. * 60 * 60
+year2day = 365.
 
 # Variable names
 varName = {}
@@ -46,6 +46,7 @@ def getModelParam():
     p['tauExt'] = cfg.model.tauExt
     p['w0'] = cfg.model.w0
     p['epsh'] = cfg.model.epsh
+    p['sigmahInf2'] = cfg.model.sigmahInf2
     p['sigmah'] = np.sqrt(cfg.model.sigmahInf2 * 2 * p['epsh'])
          
     # Dimensional parameters
@@ -264,6 +265,41 @@ def plotOrbit(diagnostic, p, limTE=None, limhW=None):
     ax.set_ylim(limhW[0], limhW[1])
   ax.set_xlabel(r'$TE$', fontsize=ergoPlot.fs_latex)
   ax.set_ylabel(r'$hW$', fontsize=ergoPlot.fs_latex)
+  plt.setp(ax.get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
+  plt.setp(ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
+
+
+def plotFloquetVec(xt, p, FE, FVL, FVR, comps, scale=1, colors=None,
+                   compLabels=None):
+  os.system("mkdir %s/continuation/po/orbit/ 2> /dev/null" % plotDir)
+  (i, j) = comps
+  po = xt[0]
+  dim = po.shape[0]
+  if colors is None:
+    colors = ['r', 'g', 'b']
+  if compLabels is None:
+    compLabels = [r'$x$', r'$y$', r'$z$']
+  # Plot (x, y) plane
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(xt[:, i], xt[:, j], '-k')
+  ax.scatter(po[i], po[j], s=40, c='k')
+  labels = ['0', '1', '2']
+  for d in np.arange(dim):
+    # Normalize only with respect to components
+    vr = FVR[:, d].copy()
+    vr /= np.sqrt(vr[i]**2 + vr[j]**2)
+    ax.plot([po[i], po[i] + scale*vr[i]],
+            [po[j], po[j] + scale*vr[j]], color=colors[d],
+            linestyle='-', linewidth=2, label=r'$e^{%s}$' % labels[d])
+    vl = FVL[:, d].copy()
+    vl /= np.sqrt(vl[i]**2 + vl[j]**2)
+    ax.plot([po[i], po[i] + scale*vl[i]],
+            [po[j], po[j] + scale*vl[j]], color=colors[d],
+            linestyle='--', linewidth=2, label=r'$f^{%s}$' % labels[d])
+    ax.legend(fontsize=ergoPlot.fs_latex)
+  ax.set_xlabel(compLabels[i], fontsize=ergoPlot.fs_latex)
+  ax.set_ylabel(compLabels[j], fontsize=ergoPlot.fs_latex)
   plt.setp(ax.get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
   plt.setp(ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
 

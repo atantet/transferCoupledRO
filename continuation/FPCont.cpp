@@ -8,14 +8,11 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_eigen.h>
-#include <libconfig.h++>
 #include <ODESolvers.hpp>
 #include <ODECont.hpp>
 #include <ODEFields.hpp>
 #include "../cfg/readConfig.hpp"
 #include "../cfg/coupledRO.hpp"
-
-using namespace libconfig;
 
 
 /** \file FPCont.cpp 
@@ -101,7 +98,7 @@ int main(int argc, char * argv[])
 	  (int) (p["r"] * 1000 + 0.1), (int) (p["gamma"] * 1000 + 0.1),
 	  (int) (gsl_vector_get(initCont, dim) * 1000 + 0.1),
 	  (int) (mantis*1.01), (int) (exp*1.01));
-  sprintf(dstFileName, "%s/continuation/fpCont%s.%s",
+  sprintf(dstFileName, "%s/continuation/fpState/fpState%s.%s",
 	  resDir, dstPostfix, fileFormat);
   if (!(dstStream = fopen(dstFileName, "w")))
    {
@@ -109,7 +106,7 @@ int main(int argc, char * argv[])
       perror("");
       return EXIT_FAILURE;
     }
-  sprintf(dstFileNameEigVec, "%s/continuation/fpEigVecCont%s.%s",
+  sprintf(dstFileNameEigVec, "%s/continuation/fpEigVec/fpEigVecCont%s.%s",
 	  resDir, dstPostfix, fileFormat);
   if (!(dstStreamEigVec = fopen(dstFileNameEigVec, "w")))
     {
@@ -118,7 +115,7 @@ int main(int argc, char * argv[])
       return EXIT_FAILURE;
     }
   
-  sprintf(dstFileNameEigVal, "%s/continuation/fpEigValCont%s.%s",
+  sprintf(dstFileNameEigVal, "%s/continuation/fpEigVal/fpEigValCont%s.%s",
 	  resDir, dstPostfix, fileFormat);
   if (!(dstStreamEigVal = fopen(dstFileNameEigVal, "w")))
     {

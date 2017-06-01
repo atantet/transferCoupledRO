@@ -48,7 +48,7 @@ bool readGridMem;               //!< Whether to read the grid membership vector
 size_t N;                       //!< Dimension of the grid
 gsl_vector_uint *nx;            //!< Number of grid boxes per dimension
 gsl_vector *gridLimitsLow;      //!< Grid limits
-gsl_vector *gridLimitsUp;       //!< Grid limits
+gsl_vector *gridLimitsHigh;       //!< Grid limits
 char gridLimitsType[32];        //!< Grid limits type
 size_t nLags;                   //!< Number of transition lags for which to calculate the spectrum
 gsl_vector *tauRng;             //!< Lags for which to calculate the spectrum
@@ -175,7 +175,7 @@ readModel(const Config *cfg)
 	p["mu"] = cfg->lookup("model.mu");
       if (cfg->exists("model.sigmahInf2")) {
 	p["sigmahInf2"] = cfg->lookup("model.sigmahInf2");
-	p["sigmah2"] = p["sigmahInf2"] * 2 * p["epsh"];
+	p["sigmah"] = sqrt(p["sigmahInf2"] * 2 * p["epsh"]);
       }
       
       std::cout << "Model dimensional parameters: " << std::endl;
@@ -202,7 +202,7 @@ readModel(const Config *cfg)
       std::cout << "deltas = " << p["deltas"] << std::endl;
       std::cout << "mu = " << p["mu"] << std::endl;
       std::cout << "sigmahInf2 = " << p["sigmahInf2"] << std::endl;
-      std::cout << "sigmah2 = " << p["sigmah2"] << std::endl;
+      std::cout << "sigmah = " << p["sigmah"] << std::endl;
     }
   else
     std::cout << "Model configuration section does not exist..."
@@ -253,7 +253,8 @@ readContinuation(const Config *cfg)
       std::cout << "]" << std::endl;
     }
   else
-    std::cout << "Continuation configuration section does not exist." << std::endl;
+    std::cout << "Continuation configuration section does not exist."
+	      << std::endl;
     
   return;
 }
@@ -311,7 +312,8 @@ readSimulation(const Config *cfg)
       nt0 = (size_t) (LCut / printStep + 0.1 + 1.); // Add 1 for the initial state
     }
   else
-    std::cout << "Simulation configuration section does not exist." << std::endl;
+    std::cout << "Simulation configuration section does not exist."
+	      << std::endl;
 
   return;
 }
@@ -335,7 +337,8 @@ readSprinkle(const Config *cfg)
       std::cout << "nTraj = " << nTraj << std::endl;
 
       // Min value of state
-      const Setting &minInitStateSetting = cfg->lookup("sprinkle.minInitState");
+      const Setting &minInitStateSetting
+	= cfg->lookup("sprinkle.minInitState");
       minInitState = gsl_vector_alloc(dim);
       std::cout << "minInitState = {";
       for (size_t d = 0; d < (size_t) dim; d++) {
@@ -345,7 +348,8 @@ readSprinkle(const Config *cfg)
       std::cout << "}" << std::endl;
 
       // Max value of state
-      const Setting &maxInitStateSetting = cfg->lookup("sprinkle.maxInitState");
+      const Setting &maxInitStateSetting
+	= cfg->lookup("sprinkle.maxInitState");
       maxInitState = gsl_vector_alloc(dim);
       std::cout << "maxInitState = {";
       for (size_t d = 0; d < (size_t) dim; d++) {
@@ -355,15 +359,18 @@ readSprinkle(const Config *cfg)
       std::cout << "}" << std::endl;
 
       // Seeds
-      const Setting &seedRngSetting = cfg->lookup("sprinkle.seedRng");
-      nSeeds = seedRngSetting.getLength();
-      seedRng = gsl_vector_uint_alloc(nSeeds);
-      std::cout << "seedRng = {";
-      for (size_t seed = 0; seed < nSeeds; seed++) {
-	gsl_vector_uint_set(seedRng, seed, seedRngSetting[seed]);
-	std::cout << gsl_vector_uint_get(seedRng, seed) << ", ";
+      nSeeds = 0;
+      if (cfg->exists("sprinkle.seedRng")) {
+	const Setting &seedRngSetting = cfg->lookup("sprinkle.seedRng");
+	nSeeds = seedRngSetting.getLength();
+	seedRng = gsl_vector_uint_alloc(nSeeds);
+	std::cout << "seedRng = {";
+	for (size_t seed = 0; seed < nSeeds; seed++) {
+	  gsl_vector_uint_set(seedRng, seed, seedRngSetting[seed]);
+	  std::cout << gsl_vector_uint_get(seedRng, seed) << ", ";
+	}
+	std::cout << "}" << std::endl;
       }
-      std::cout << "}" << std::endl;
 
       // Define box postfix
       sprintf(boxPostfix, "");
@@ -384,7 +391,8 @@ readSprinkle(const Config *cfg)
 	}
     }
   else
-    std::cout << "Sprinkle configuration section does not exist." << std::endl;
+    std::cout << "Sprinkle configuration section does not exist."
+	      << std::endl;
     
    return;
 }
@@ -437,7 +445,8 @@ readObservable(const Config *cfg)
     {
       dimObs = dim;
       embedMax = 0;
-      std::cout << "Observable configuration section does not exist." << std::endl;
+      std::cout << "Observable configuration section does not exist."
+		<< std::endl;
     }
   nt = nt0 - embedMax;			    
     
@@ -471,39 +480,45 @@ readGrid(const Config *cfg)
 	}
     
       // Grid limits type
-      strcpy(gridLimitsType, (const char *) cfg->lookup("grid.gridLimitsType"));
+      strcpy(gridLimitsType,
+	     (const char *) cfg->lookup("grid.gridLimitsType"));
       std::cout << "Grid limits type: " << gridLimitsType << std::endl;
 
       // Grid limits
-      if (cfg->exists("grid.gridLimits"))
+      if (cfg->exists("grid.gridLimitsLow")
+	  && cfg->exists("grid.gridLimitsHigh"))
 	{
-	  const Setting &gridLimitsLowSetting = cfg->lookup("grid.gridLimitsLow");
-	  const Setting &gridLimitsUpSetting = cfg->lookup("grid.gridLimitsUp");
+	  const Setting &gridLimitsLowSetting
+	    = cfg->lookup("grid.gridLimitsLow");
+	  const Setting &gridLimitsHighSetting
+	    = cfg->lookup("grid.gridLimitsHigh");
 	  gridLimitsLow = gsl_vector_alloc(dimObs);
-	  gridLimitsUp = gsl_vector_alloc(dimObs);
+	  gridLimitsHigh = gsl_vector_alloc(dimObs);
 	  std::cout << "Grid limits (low, high):" << std::endl;
 	  for (size_t d = 0; d < (size_t) (dimObs); d++)
 	    {
 	      gsl_vector_set(gridLimitsLow, d, gridLimitsLowSetting[d]);
-	      gsl_vector_set(gridLimitsUp, d, gridLimitsUpSetting[d]);
+	      gsl_vector_set(gridLimitsHigh, d, gridLimitsHighSetting[d]);
 	      std::cout << "dim " << d+1 << ": ("
 			<< gsl_vector_get(gridLimitsLow, d) << ", "
-			<< gsl_vector_get(gridLimitsUp, d) << ")" << std::endl;
+			<< gsl_vector_get(gridLimitsHigh, d) << ")"
+			<< std::endl;
 	    }
 	}
       else
 	{
 	
 	  gridLimitsLow = gsl_vector_alloc(dimObs);
-	  gridLimitsUp = gsl_vector_alloc(dimObs);
+	  gridLimitsHigh = gsl_vector_alloc(dimObs);
 	  gsl_vector_memcpy(gridLimitsLow, minInitState);
-	  gsl_vector_memcpy(gridLimitsUp, maxInitState);
+	  gsl_vector_memcpy(gridLimitsHigh, maxInitState);
 	  std::cout << "Grid limits (low, high):" << std::endl;
 	  for (size_t d = 0; d < (size_t) (dimObs); d++)
 	    {
 	      std::cout << "dim " << d+1 << ": ("
 			<< gsl_vector_get(gridLimitsLow, d) << ", "
-			<< gsl_vector_get(gridLimitsUp, d) << ")" << std::endl;
+			<< gsl_vector_get(gridLimitsHigh, d) << ")"
+			<< std::endl;
 	    }
 	}
     
@@ -517,13 +532,13 @@ readGrid(const Config *cfg)
       sprintf(gridPostfix, "");
       for (size_t d = 0; d < (size_t) dimObs; d++)
 	{
-	  if (gridLimitsLow && gridLimitsUp)
+	  if (gridLimitsLow && gridLimitsHigh)
 	    {
 	      strcpy(cpyBuffer, gridPostfix);
 	      sprintf(gridPostfix, "%s_n%dl%dh%d", cpyBuffer,
 		      gsl_vector_uint_get(nx, d),
 		      (int) gsl_vector_get(gridLimitsLow, d),
-		      (int) gsl_vector_get(gridLimitsUp, d));
+		      (int) gsl_vector_get(gridLimitsHigh, d));
 	    }
 	  else
 	    {
@@ -568,7 +583,8 @@ readTransfer(const Config *cfg)
       std::cout << "Is stationary: " << stationary << std::endl;
     }
   else
-    std::cout << "Transfer configuration section does not exist." << std::endl;
+    std::cout << "Transfer configuration section does not exist."
+	      << std::endl;
 
   return;
 }
@@ -620,11 +636,13 @@ readSpectrum(const Config *cfg)
 
       if (cfg->exists("spectrum.getForwardEigenvectors"))
 	{
-	  getForwardEigenvectors = cfg->lookup("spectrum.getForwardEigenvectors");
+	  getForwardEigenvectors
+	    = cfg->lookup("spectrum.getForwardEigenvectors");
 	}
       if (cfg->exists("spectrum.getBackwardEigenvectors"))
 	{
-	  getBackwardEigenvectors = cfg->lookup("spectrum.getBackwardEigenvectors");
+	  getBackwardEigenvectors
+	    = cfg->lookup("spectrum.getBackwardEigenvectors");
 	}
       if (cfg->exists("spectrum.makeBiorthonormal"))
 	{
@@ -632,7 +650,8 @@ readSpectrum(const Config *cfg)
 	}
     }
     else
-      std::cout << "Spectrum configuration section does not exist." << std::endl;
+      std::cout << "Spectrum configuration section does not exist."
+		<< std::endl;
 
     return;
 }
@@ -697,8 +716,8 @@ freeConfig()
     gsl_vector_free(tauRng);
   if (gridLimitsLow)
     gsl_vector_free(gridLimitsLow);
-  if (gridLimitsUp)
-    gsl_vector_free(gridLimitsUp);
+  if (gridLimitsHigh)
+    gsl_vector_free(gridLimitsHigh);
   if (nx)
     gsl_vector_uint_free(nx);
   if (embedding)

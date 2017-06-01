@@ -13,22 +13,18 @@
 #include <gsl/gsl_eigen.h>
 #include <gsl_extension.hpp>
 #include <gsl/gsl_blas.h>
-#include <libconfig.h++>
 #include <ODESolvers.hpp>
 #include <ODECont.hpp>
 #include <ODEFields.hpp>
 #include "../cfg/readConfig.hpp"
 #include "../cfg/coupledRO.hpp"
 
-using namespace libconfig;
-
-
 void handler(const char *reason, const char *file, int line, int gsl_errno);
   
 void getArgContSel(FILE *srcStream, gsl_vector *initCont, size_t nCont,
 		   gsl_vector_uint *argContSel);
 
-/** \file getPhaseDiffuion.cpp 
+/** \file getPhaseDiffusion.cpp 
  *  \brief Get phase diffusion in coupled recharge oscillator.
  *
  * Get phase diffusion from periodic orbit continuation 
@@ -121,7 +117,7 @@ int main(int argc, char * argv[])
 
   // Define diffusion matrix
   gsl_matrix_set_zero(Q);
-  gsl_matrix_set(Q, dim - 1, dim - 1, p["sigmah2"]);
+  gsl_matrix_set(Q, dim - 1, dim - 1, gsl_pow_2(p["sigmah"]));
   if (verbose) {
     std::cout << "Diffusion matrix Q = " << std::endl;
     gsl_matrix_fprintf(stdout, Q, "%lf");
@@ -132,12 +128,9 @@ int main(int argc, char * argv[])
   size_t nCont = 21;
   double eta2Step, rStep, gammaStep;
   gsl_vector_uint *argContSel = gsl_vector_uint_alloc(nCont);
-  //double eta2Min = 0.5; double eta2Max = 0.55; size_t neta2 = 6;
-  double eta2Min = 0.56; double eta2Max = 0.6; size_t neta2 = 5;
-  //double eta2Min = 0.61; double eta2Max = 0.65; size_t neta2 = 5;
-  //double eta2Min = 0.66; double eta2Max = 0.7; size_t neta2 = 5;
-  double rMin = 0.19; double rMax = 0.3; size_t nr = 1;
-  double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 21;
+  double eta2Min = 0.5; double eta2Max = 0.7; size_t neta2 = 21;
+  double rMin = 0.1; double rMax = 0.3; size_t nr = 21;
+  double gammaMin = 0.39; double gammaMax = 0.5; size_t ngamma = 1;
   if (neta2 == 1)
     eta2Step = 0.;
   else
@@ -161,10 +154,11 @@ int main(int argc, char * argv[])
 		  << std::endl;
 
 	// Open source files
-   	sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s", srcPostfix,
+   	sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s_dt%d", srcPostfix,
 		(int) (p["eta2"] * 1000 + 0.1), (int) (p["r"] * 1000 + 0.1),
-		(int) (p["gamma"] * 1000 + 0.1), contPostfix);
-	sprintf(fileName, "%s/continuation/poCont/poState%s.%s",
+		(int) (p["gamma"] * 1000 + 0.1), contPostfix,
+		(int) (round(-gsl_sf_log(dt)/gsl_sf_log(10)) + 0.1));
+	sprintf(fileName, "%s/continuation/poState/poState%s.%s",
 		resDir, dstPostfix, fileFormat);
 	if (!(srcStream = fopen(fileName, "rb"))) {
 	  fprintf(stderr, "Can't open %s for reading solution: ",
@@ -220,27 +214,17 @@ int main(int argc, char * argv[])
 	  while ((!gsl_vector_fread(srcStream, initCont))
 		 && (readCountSel < nCont)) {
 	    if (readCount == gsl_vector_uint_get(argContSel, readCountSel)) {
-	      // Read Floquet elements
-	      gsl_vector_complex_fread(srcStreamExp, FloquetExp);
-	      gsl_matrix_complex_fread(srcStreamVecLeft, FloquetVecLeft);
-	      gsl_matrix_complex_fread(srcStreamVecRight, FloquetVecRight);
-	    
 	      // Set control parameter and period
 	      p["mu"] = gsl_vector_get(initCont, dim);
 	      T = gsl_vector_get(initCont, dim + 1);
 	      init = gsl_vector_subvector(initCont, 0, dim);
-	      std::cout << "Computing phase diffusion coefficient for mu = "
-			<< p["mu"] << " with period " << T << std::endl;
+	      std::cout << "Computing phase diffusion coefficient at "
+			<< readCount << " for mu = " << p["mu"]
+			<< " with period " << T << std::endl;
 	      // Get total number of time steps in period
-	      ntOrbit = (size_t) (ceil(T / dt) + 0.1);
+	      ntOrbit = (size_t) (ceil(T / dt / 10) + 0.1);
 	      // Get time step adapted to period
 	      dtOrbit = T / ntOrbit;
-	      // Get left and right Floquet vectors in the direction of
-	      // the flow (must have been sorted before)
-	      vLeft = gsl_matrix_complex_column(FloquetVecLeft, 0);
-	      vRight = gsl_matrix_complex_column(FloquetVecRight, 0);
-	      vLeftReal = gsl_vector_complex_real(&vLeft.vector);
-	      vRightReal = gsl_vector_complex_real(&vRight.vector);
 	      
 	      // Define field
 	      vectorField *field = new coupledRO(&p);
@@ -258,6 +242,22 @@ int main(int argc, char * argv[])
 	      fundamentalMatrixModel *linMod
 		= new fundamentalMatrixModel(mod, Jacobian);
 
+	      // Read Floquet elements
+	      gsl_vector_complex_fread(srcStreamExp, FloquetExp);
+	      gsl_matrix_complex_fread(srcStreamVecLeft, FloquetVecLeft);
+	      gsl_matrix_complex_fread(srcStreamVecRight, FloquetVecRight);
+	    
+	      // Normalize
+	      normalizeFloquet(initCont, field, FloquetExp, FloquetVecLeft,
+			       FloquetVecRight);
+	    
+	      // Get left and right Floquet vectors in the direction of
+	      // the flow (must have been sorted before)
+	      vLeft = gsl_matrix_complex_column(FloquetVecLeft, 0);
+	      vRight = gsl_matrix_complex_column(FloquetVecRight, 0);
+	      vLeftReal = gsl_vector_complex_real(&vLeft.vector);
+	      vRightReal = gsl_vector_complex_real(&vRight.vector);
+	      
 	      gsl_matrix *xt = gsl_matrix_alloc(1, 1);
 	      std::vector<gsl_matrix *> Mts;
 	      std::vector<gsl_matrix *> Qs;
@@ -396,7 +396,9 @@ getArgContSel(FILE *srcStream, gsl_vector *initCont, size_t nCont,
 	distCont = distContj;
       }
     }
-    // Save
+    // Save after checking that two values are not consecutive
+    while ((i >= 1) && (arg <= gsl_vector_uint_get(argContSel, i-1)))
+      arg++;
     gsl_vector_uint_set(argContSel, i, arg);
   }
   // Free

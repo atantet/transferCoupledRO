@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.tri as tri
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib.colors import LogNorm
 import sys
 sys.path.append('../cfg/')
 from coupledRO import *
@@ -9,6 +10,7 @@ from ergoInt import *
 from ergoCont import *
 import ergoPlot
 import traceback
+from scipy.interpolate import interp1d
 
 dim = cfg.model.dim
 fileFormat = cfg.general.fileFormat
@@ -42,6 +44,7 @@ eta2Rng = np.linspace(eta2Min, eta2Max, neta2)
 rRng = np.linspace(rMin, rMax, nr)
 gammaRng = np.linspace(gammaMin, gammaMax, ngamma)
 data = np.empty((6, 0))
+contInterp = np.linspace(0., 7., 100)
 for ieta2 in np.arange(eta2Rng.shape[0]):
     p['eta2'] = eta2Rng[ieta2]
     for ir in np.arange(rRng.shape[0]):
@@ -91,6 +94,8 @@ for ieta2 in np.arange(eta2Rng.shape[0]):
                 # Scale with time
                 phiRng /= pdim['tadim2year']
                 FE2 /= pdim['tadim2year']
+                fphi = interp1d(contRngSel, phiRng)
+                fFE2 = interp1d(contRngSel, FE2)
                 datai = np.concatenate((np.ones((contRngSel.shape[0],)) \
                                         * p['eta2'],
                                         np.ones((contRngSel.shape[0],)) \
@@ -104,11 +109,13 @@ for ieta2 in np.arange(eta2Rng.shape[0]):
                 traceback.print_exc()
                 pass
 
+
+            
 eta2Sel = 0.6
 rSel = 0.17
 gammaSel = 0.39
 nLev = 20
-vmax = 1.
+vmax = 5.
 lwTriangle = 0.1
 
 # Plot (mu, eta2)
@@ -117,21 +124,21 @@ sel = ((data[1] - rSel)**2 < 1.e-8) & ((data[2] - gammaSel)**2 < 1.e-8)
 dataSel = data[:, sel]
 paramRng = dataSel[0]
 contRngSel = dataSel[3]
-phiRngSel = dataSel[4].copy()
+phiRngSel = dataSel[4]
 phiRngSel[phiRngSel > vmax] = vmax
 dstPostfixPlot = "%s_eta2%04d%s" \
                  % (srcPostfix, int(p["eta2"] * 1000 + 0.1), contPostfix)
 # Plot
 fig = plt.figure()
 ax = fig.add_subplot(111)
-# #levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
-# levels = np.linspace(0.1,1,10)
-# levels = np.concatenate((levels[:-1],np.linspace(1.,10, 10)))
+#levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
+levels = np.linspace(0.1,1,10)
+levels = np.concatenate((levels[:-1],np.linspace(1.,10, 10)))
 #levels = np.concatenate((levels[:-1],np.linspace(10,100,10)))
-levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
 triang = tri.Triangulation(contRngSel, paramRng)
-#plt.triplot(triang, lw=lwTriangle, color='white')
-cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r)
+plt.triplot(triang, lw=lwTriangle, color='white')
+cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r,
+                    norm = LogNorm())
 cbar = plt.colorbar(cf)
 cbar.ax.set_ylabel(r'$\phi$', fontsize=ergoPlot.fs_latex)
 plt.setp(cbar.ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
@@ -151,17 +158,18 @@ sel = ((data[0] - eta2Sel)**2 < 1.e-8) & ((data[2] - gammaSel)**2 < 1.e-8)
 dataSel = data[:, sel]
 paramRng = dataSel[1]
 contRngSel = dataSel[3]
-phiRngSel = dataSel[4].copy()
+phiRngSel = dataSel[4]
 phiRngSel[phiRngSel > vmax] = vmax
 dstPostfixPlot = "%s_r%04d%s" \
                  % (srcPostfix, int(p["r"] * 1000 + 0.1), contPostfix)
 # Plot
 fig = plt.figure()
 ax = fig.add_subplot(111)
-levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
+#levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
 triang = tri.Triangulation(contRngSel, paramRng)
-#plt.triplot(triang, lw=lwTriangle, color='white')
-cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r)
+plt.triplot(triang, lw=lwTriangle, color='white')
+cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r,
+                    norm = LogNorm())
 cbar = plt.colorbar(cf)
 cbar.ax.set_ylabel(r'$\phi$', fontsize=ergoPlot.fs_latex)
 plt.setp(cbar.ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
@@ -181,17 +189,18 @@ sel = ((data[0] - eta2Sel)**2 < 1.e-8) & ((data[1] - rSel)**2 < 1.e-8)
 dataSel = data[:, sel]
 paramRng = dataSel[2]
 contRngSel = dataSel[3]
-phiRngSel = dataSel[4].copy()
+phiRngSel = dataSel[4]
 phiRngSel[phiRngSel > vmax] = vmax
 dstPostfixPlot = "%s_gamma%04d%s" \
                  % (srcPostfix, int(p["gamma"] * 1000 + 0.1), contPostfix)
 # Plot
 fig = plt.figure()
 ax = fig.add_subplot(111)
-levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
+#levels = np.linspace(np.min(phiRngSel)*1.01, np.max(phiRngSel)*1.01, nLev)
 triang = tri.Triangulation(contRngSel, paramRng)
-#plt.triplot(triang, lw=lwTriangle, color='white')
-cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r)
+plt.triplot(triang, lw=lwTriangle, color='white')
+cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r,
+                    norm = LogNorm())
 cbar = plt.colorbar(cf)
 cbar.ax.set_ylabel(r'$\phi$', fontsize=ergoPlot.fs_latex)
 plt.setp(cbar.ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
@@ -221,7 +230,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 levels = np.linspace(0., np.max(phiRngSel), nLev)
 triang = tri.Triangulation(contRngSel, paramRng)
-#plt.triplot(triang, lw=lwTriangle, color='white')
+plt.triplot(triang, lw=lwTriangle, color='white')
 cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r)
 cbar = plt.colorbar(cf)
 cbar.ax.set_ylabel(r'$|\lambda_{-}|$', fontsize=ergoPlot.fs_latex)
@@ -250,7 +259,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 levels = np.linspace(0., np.max(phiRngSel), nLev)
 triang = tri.Triangulation(contRngSel, paramRng)
-#plt.triplot(triang, lw=lwTriangle, color='white')
+plt.triplot(triang, lw=lwTriangle, color='white')
 cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r)
 cbar = plt.colorbar(cf)
 cbar.ax.set_ylabel(r'$|\lambda_{-}|$', fontsize=ergoPlot.fs_latex)
@@ -279,7 +288,7 @@ fig = plt.figure()
 ax = fig.add_subplot(111)
 levels = np.linspace(0., np.max(phiRngSel), nLev)
 triang = tri.Triangulation(contRngSel, paramRng)
-#plt.triplot(triang, lw=lwTriangle, color='white')
+plt.triplot(triang, lw=lwTriangle, color='white')
 cf = ax.tricontourf(triang, phiRngSel, levels, cmap=cm.magma_r)
 cbar = plt.colorbar(cf)
 cbar.ax.set_ylabel(r'$|\lambda_{-}|$', fontsize=ergoPlot.fs_latex)

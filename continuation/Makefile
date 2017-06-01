@@ -13,18 +13,12 @@ LDFLAGSGDB=$(LDFLAGSSTD) -gdb
 LDFLAGS=$(LDFLAGSSTD)
 #LDFLAGS=$(LDFLAGSGDB)
 
-ifeq ($(EXE),)
-EXE=FPCont
-#EXE=FPContLoop
-#EXE=POCont
-endif
-
 all:$(EXE).out
 	mkdir -p ../results/continuation/
-	mkdir -p ../results/continuation/fpCont/
+	mkdir -p ../results/continuation/fpState/
 	mkdir -p ../results/continuation/fpEigVal/
 	mkdir -p ../results/continuation/fpEigVec/
-	mkdir -p ../results/continuation/poCont/
+	mkdir -p ../results/continuation/poState/
 	mkdir -p ../results/continuation/poExp/
 	mkdir -p ../results/continuation/poVecLeft/
 	mkdir -p ../results/continuation/poVecRight/

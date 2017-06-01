@@ -8,14 +8,11 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl_extension.hpp>
-#include <libconfig.h++>
 #include <ODESolvers.hpp>
 #include <ODECont.hpp>
 #include <ODEFields.hpp>
 #include "../cfg/readConfig.hpp"
 #include "../cfg/coupledRO.hpp"
-
-using namespace libconfig;
 
 
 /** \file POCont.cpp 
@@ -81,7 +78,7 @@ int main(int argc, char * argv[])
       return(EXIT_FAILURE);
     }
 
-  char fileName[256], srcPostfix[256], dstPostfix[256];
+  char fileName[256], srcPostfix[256], dstPostfix[256], contPostfix[256];
   FILE *dstStream, *dstStreamExp, *dstStreamVecLeft, *dstStreamVecRight;
   gsl_vector_complex *FloquetExp = gsl_vector_complex_alloc(dim);
   gsl_matrix_complex *FloquetVecLeft = gsl_matrix_complex_alloc(dim, dim);
@@ -93,13 +90,14 @@ int main(int argc, char * argv[])
   double exp = gsl_sf_log(contAbs)/gsl_sf_log(10);
   double mantis = sign * gsl_sf_exp(gsl_sf_log(contAbs) / exp);
   sprintf(srcPostfix, "_%s", caseName);
-  sprintf(dstPostfix, "%s_eta2%03d_r%03d_gamma%03d_cont%04d_contStep%de%d",
-	  srcPostfix, (int) (p["eta2"] * 100 + 0.1),
-	  (int) (p["r"] * 1000 + 0.1), (int) (p["gamma"] * 1000 + 0.1),
-	  (int) (gsl_vector_get(initCont, dim) * 1000 + 0.1),
+  sprintf(contPostfix, "_cont%04d_contStep%de%d", 0,
 	  (int) (mantis*1.01), (int) (exp*1.01));
+  sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s_dt%d", srcPostfix,
+	  (int) (p["eta2"] * 1000 + 0.1), (int) (p["r"] * 1000 + 0.1),
+	  (int) (p["gamma"] * 1000 + 0.1), contPostfix,
+	  (int) (round(-gsl_sf_log(dt)/gsl_sf_log(10)) + 0.1));
   
-  sprintf(fileName, "%s/continuation/poCont/poState%s.%s",
+  sprintf(fileName, "%s/continuation/poState/poState%s.%s",
 	  resDir, dstPostfix, fileFormat);
   if (!(dstStream = fopen(fileName, "w")))
     {
@@ -165,92 +163,120 @@ int main(int argc, char * argv[])
 						   dt, numShoot, verbose);
 
   try {
-  // First correct
-  std::cout << "\nApplying initial correction:" << std::endl;
-  track->correct(initCont);
+    // First correct
+    if (verbose)
+      std::cout << "\nApplying initial correction:" << std::endl;
+    track->correct(initCont);
 
-  if (!track->hasConverged()) {
+    if (!track->hasConverged()) {
       std::cerr << "\nFirst correction could not converge." << std::endl;
       throw std::exception();
-  }
-
-  std::cout << "Found initial periodic orbit after "
-	    << track->getNumIter() << " iterations"
-	    << " with distance = " << track->getDist()
-		<< " and step = " << track->getStepCorrSize() << std::endl;
-  std::cout << "periodic orbit:" << std::endl;
-  gsl_vector_fprintf(stdout, initCont, "%lf");
-
-  // Get Floquet elements
-  getFloquet(track, initCont, FloquetExp, FloquetVecLeft, FloquetVecRight,
-	     true);
-  
-  // Find and write Floquet elements
-  writeFloquet(track, initCont, FloquetExp, FloquetVecLeft, FloquetVecRight,
-	       dstStream, dstStreamExp, dstStreamVecLeft, dstStreamVecRight,
-	       fileFormat, verbose);
-
-  int predCount = 0;
-  while ((gsl_vector_get(initCont, dim) >= contMin)
-	 && (gsl_vector_get(initCont, dim) <= contMax))
-    {
-      if (predCount >= maxPred) {
-	std::cerr << "\nPrediction count exceeding maxPred = "
-		  << maxPred << std::endl;
-	throw std::exception();
-      }
-
-      // Find periodic orbit
-      std::cout << "\nApplying continuation step "
-		<< predCount << std::endl;
-      track->continueStep(contStep);
-
-      if (!track->hasConverged()) {
-	std::cerr << "\nContinuation could not converge." << std::endl;
-	throw std::exception();
-      }
-
-      std::cout << "Found initial periodic orbit after "
-		<< track->getNumIter() << " iterations"
-		<< " with distance = " << track->getDist()
-		<< " and step = " << track->getStepCorrSize() << std::endl;
-      
-      // Get Floquet elements
-      getFloquet(track, initCont, FloquetExp,
-		 FloquetVecLeft, FloquetVecRight, true);
-      
-      // Find and write Floquet elements
-      writeFloquet(track, initCont, FloquetExp,
-		   FloquetVecLeft, FloquetVecRight,
-		   dstStream, dstStreamExp, dstStreamVecLeft,
-		   dstStreamVecRight, fileFormat, verbose);
-      
-      predCount++;
-
-      // Flush in case premature exit
-      fflush(dstStream);
-      fflush(dstStreamExp);
-      fflush(dstStreamVecLeft);
-      fflush(dstStreamVecRight);
     }
+
+    // Get Floquet elements
+    getFloquet(track, initCont, FloquetExp,
+	       FloquetVecLeft, FloquetVecRight, true);
+  
+    // Find and write Floquet elements
+    writeFloquet(track, initCont, FloquetExp,
+		 FloquetVecLeft, FloquetVecRight,
+		 dstStream, dstStreamExp, dstStreamVecLeft,
+		 dstStreamVecRight, fileFormat, verbose);
   }
   catch(const std::exception &ex) {
-    std::cout << "Exception." << std::endl;
+    std::cout << "Exception during initial correction.\n"
+	      << std::endl;
+    delete track;
+    delete linMod;
+    delete mod;
+    delete scheme;
+    delete Jacobian;
+    delete field;
+    fclose(dstStreamExp);
+    fclose(dstStreamVecLeft);
+    fclose(dstStreamVecRight);
+    fclose(dstStream);
+    throw std::exception();
   }
+  
+  int predCount = 0;
+  double contStepAdapt = contStep;
+  while (predCount < maxPred)
+    {
+      // Find periodic orbit
+      std::cout << "Applying continuation step "
+		<< predCount << " for mu = "
+		<< gsl_vector_get(initCont, dim)
+		<< " with step " << contStepAdapt << std::endl;
+      try {
+	track->continueStep(contStepAdapt);
 
+	// Useful?
+	if (!track->hasConverged()) {
+	  std::cerr << "\nContinuation could not converge."
+		    << std::endl;
+	  throw std::exception();
+	}
+	else // Update initial state to current state
+	  track->setInitialStateToCurrent();
+		
+	// Get Floquet elements
+	getFloquet(track, initCont, FloquetExp,
+		   FloquetVecLeft, FloquetVecRight, true);
+		
+	// Find and write Floquet elements
+	writeFloquet(track, initCont, FloquetExp,
+		     FloquetVecLeft, FloquetVecRight,
+		     dstStream, dstStreamExp, dstStreamVecLeft,
+		     dstStreamVecRight, fileFormat, verbose);
+		
+	predCount++;
+		
+	// Flush in case premature exit
+	fflush(dstStream);
+	fflush(dstStreamExp);
+	fflush(dstStreamVecLeft);
+	fflush(dstStreamVecRight);
+      }
+      catch(const std::exception &ex) {
+	std::cout << "Exception: continuation." << std::endl;
+	if (contStepAdapt < 1.e-6) {
+	  std::cout << "Time-step already too small.\n"
+		    << std::endl;
+	  delete track;
+	  delete linMod;
+	  delete mod;
+	  delete scheme;
+	  delete Jacobian;
+	  delete field;
+	  fclose(dstStreamExp);
+	  fclose(dstStreamVecLeft);
+	  fclose(dstStreamVecRight);
+	  fclose(dstStream);
+	  throw std::exception();
+	}
+	else {
+	  std::cout << "Dividing time-step.\n" << std::endl;
+	  // Divide time step and reinitialize
+	  contStepAdapt /= 2;
+	  track->initialize();
+	}
+      }
+    }
+  
   delete track;
   delete linMod;
   delete mod;
   delete scheme;
   delete Jacobian;
   delete field;
-  gsl_vector_complex_free(FloquetExp);
-  gsl_matrix_complex_free(FloquetVecLeft);
-  gsl_matrix_complex_free(FloquetVecRight);
   fclose(dstStreamExp);
   fclose(dstStreamVecLeft);
   fclose(dstStreamVecRight);
   fclose(dstStream);
+  gsl_vector_complex_free(FloquetExp);
+  gsl_matrix_complex_free(FloquetVecLeft);
+  gsl_matrix_complex_free(FloquetVecRight);
   freeConfig();
 
   return 0;

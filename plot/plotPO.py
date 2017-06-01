@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pylibconfig2
 import sys
 sys.path.append('../cfg/')
 from coupledRO import *
 from ergoInt import *
 
-p["eta2"] = 0.5
-p["r"] = 0.1
-p["gamma"] = 0.3
+p["eta2"] = 0.6
+p["r"] = 0.17
+p["gamma"] = 0.39
 
 dim = cfg.model.dim
 fileFormat = cfg.general.fileFormat
@@ -16,7 +15,6 @@ fileFormat = cfg.general.fileFormat
 # List of continuations to plot
 initContRng = [0.]
 contStepRng = [0.01]
-dtRng = [1.e-3]
 nCont = len(initContRng)
 
 # Prepare plot
@@ -63,11 +61,14 @@ for k in np.arange(nCont):
     contPostfix = "_cont%04d_contStep%de%d" \
                   % (int(initCont * 1000 + 0.1), int(mantis*1.01),
                      (int(exp*1.01)))
-    dstPostfix = "%s_eta2%04d_r%04d_gamma%04d%s" \
+    dstPostfixFP = "%s_eta2%04d_r%04d_gamma%04d%s" \
                  % (srcPostfix, int(p["eta2"] * 1000 + 0.1),
-                    int(p["r"] * 1000 + 0.1), int(p["gamma"] * 1000 + 0.1),
-                    contPostfix)
-    poFileName = '%s/poCont/poState%s.%s' % (contDir, dstPostfix, fileFormat)
+                    int(p["r"] * 1000 + 0.1),
+                    int(p["gamma"] * 1000 + 0.1), contPostfix)
+    dstPostfix = "%s_dt%d" \
+                 % (dstPostfixFP,
+                    int(np.round(-np.log10(cfg.simulation.dt)) + 0.1))
+    poFileName = '%s/poState/poState%s.%s' % (contDir, dstPostfix, fileFormat)
     FloquetExpFileName = '%s/poExp/poExp%s.%s' \
                          % (contDir, dstPostfix, fileFormat)
 
@@ -123,52 +124,49 @@ for k in np.arange(nCont):
     ax[1+2*k].plot(contRng, np.zeros((contRng.shape[0],)), '--k')
     ax[1+2*k].plot(contRng, FloquetExp.real \
                    / np.tile(fact, (FloquetExp.shape[0], 1)), linewidth=2)
-    ax[1+2*k].set_ylabel(r'$\Re(\lambda_i)$', fontsize=ergoPlot.fs_latex)
+    ax[1+2*k].set_ylabel(r'$\Re(\lambda_i)$ (yr$^{-1}$)',
+                         fontsize=ergoPlot.fs_latex)
     plt.setp(ax[1+2*k].get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
     plt.setp(ax[1+2*k].get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
 
     # Plot imaginary parts
     if plotImag:
         ax[1+2*k+1].plot(contRng, FloquetExp.imag, linewidth=2)
-        ax[1+2*k+1].set_ylabel(r'$\Im(\lambda_i)$', fontsize=ergoPlot.fs_latex)
+        ax[1+2*k+1].set_ylabel(r'$\Im(\lambda_i)$ (rad \
+        $\cdot$ yr$^{-1}$)', fontsize=ergoPlot.fs_latex)
         plt.setp(ax[1+2*k+1].get_xticklabels(),
                  fontsize=ergoPlot.fs_xticklabels)
         plt.setp(ax[1+2*k+1].get_yticklabels(),
                  fontsize=ergoPlot.fs_yticklabels)
-        ax[1+2*k+1].set_xlim(cfg.continuation.contMin,
-                             cfg.continuation.contMax)
-ax[0].set_ylabel(r'$T$', fontsize=ergoPlot.fs_latex)
+ax[0].set_ylabel(r'$T$ (yr)', fontsize=ergoPlot.fs_latex)
 plt.setp(ax[0].get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
 plt.setp(ax[0].get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
-ax[-1].set_xlabel(r'$\rho$', fontsize=ergoPlot.fs_latex)
+ax[-1].set_xlabel(r'$\mu$', fontsize=ergoPlot.fs_latex)
 for k in np.arange(len(ax)):
-    ax[k].set_xlim(np.min(contLim[:, 0]), np.max(contLim[:, 1]))
+    ax[k].set_xlim(np.min(contLim[:, 0]), np.max(contLim[:, 1]) * 1.001)
 
-plt.savefig('%s/continuation/po/poCont%s.eps' % (plotDir, dstPostfix),
+fig.savefig('%s/continuation/po/poCont%s.eps' % (plotDir, dstPostfix),
             dpi=300, bbox_inches='tight')
 
 
 # Fixed point
-initContRngFP = [0.]
-contStepRngFP = [0.001]
-nContFP = len(initContRngFP)
-
 fig = plt.figure()
 ax = fig.add_subplot(111)
 dist = []
 contFPL = []
 diagFPL = []
 fpL = []
-for k in np.arange(nContFP):
-    initContFP = initContRngFP[k]
-    contStepFP = contStepRngFP[k]
+for k in np.arange(nCont):
+    initContFP = initContRng[k]
+    contStepFP = contStepRng[k]
     contAbs = np.sqrt(contStepFP*contStepFP)
     sign = contStepFP / contAbs
     exp = np.log10(contAbs)
     mantis = sign * np.exp(np.log(contAbs) / exp)
-    fpFileName = '%s/fpCont/fpCont%s.%s' % (contDir, dstPostfix, fileFormat)
+    fpFileName = '%s/fpState/fpState%s.%s' \
+                 % (contDir, dstPostfixFP, fileFormat)
     eigValFileName = '%s/fpEigVal/fpEigValCont%s.%s' \
-                     % (contDir, dstPostfix, fileFormat)
+                     % (contDir, dstPostfixFP, fileFormat)
 
     # Read fixed point and cont
     state = readFile(fpFileName).reshape(-1, dim+1)
@@ -217,10 +215,12 @@ for k in np.arange(nCont):
             ' from x(0) = ', x0
         print 'Floquet = ', FE
 
-        nt = int(np.ceil(T / dtRng[k]))
+        # Adapt time step
+	ntOrbit = int(np.ceil(T / cfg.simulation.dt) + 0.1)
+	dtOrbit = T / ntOrbit
         # propagate
         p['mu'] = cont
-        xt = propagate(x0, fieldRO2D, p, stepRK4, dtRng[k], nt)
+        xt = propagate(x0, fieldRO2D, p, stepRK4, dtOrbit, ntOrbit)
         
         # Diagnose
         diag = diagnose(xt, p)
@@ -231,7 +231,7 @@ for k in np.arange(nCont):
         
         # Plot corresponding fixed point
         mini = 1.e27
-        for l in np.arange(nContFP): 
+        for l in np.arange(nCont): 
             icontFPl = np.argmin((contFPL[l] - cont)**2)
             mn = contFPL[l][icontFPl]
             if mn < mini:
@@ -245,7 +245,7 @@ for k in np.arange(nCont):
         ic += 1
 
         # Last one
-    t = -1
+    t = -400
     cont = contRng[t]
     T = TRng[t]
     x0 = po[t]
@@ -253,10 +253,12 @@ for k in np.arange(nCont):
     print 'Propagating orbit of period ', T, ' at mu = ', cont, \
         ' from x(0) = ', x0
     print 'Floquet = ', FE
-    nt = int(np.ceil(T / dtRng[k]))
+    # Adapt time step
+    ntOrbit = int(np.ceil(T / cfg.simulation.dt) + 0.1)
+    dtOrbit = T / ntOrbit
     # propagate
     p['mu'] = cont
-    xt = propagate(x0, fieldRO2D, p, stepRK4, dtRng[k], nt)
+    xt = propagate(x0, fieldRO2D, p, stepRK4, dtOrbit, ntOrbit)
 
     # Diagnose
     diag = diagnose(xt, p)
@@ -267,7 +269,7 @@ for k in np.arange(nCont):
 
     # Plot corresponding fixed point
     mini = 1.e27
-    for l in np.arange(nContFP): 
+    for l in np.arange(nCont): 
         icontFPl = np.argmin((contFPL[l] - cont)**2)
         mn = contFPL[l][icontFPl]
         if mn < mini:
@@ -277,15 +279,14 @@ for k in np.arange(nCont):
     ax.scatter(diagFPL[minil]['TE'][icontFP], diagFPL[minil]['hW'][icontFP],
                s=msize, c=cCycle[ic%len(cCycle)], edgecolor='face',
                marker='o') 
-
-    ax.legend()
-    plt.setp(ax.get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
-    plt.setp(ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
-    ax.set_xlabel(r'$T_E$', fontsize=ergoPlot.fs_latex)
-    ax.set_ylabel(r'$h_W$', fontsize=ergoPlot.fs_latex)
-    fig.savefig('%s/continuation/po/poContOrbit%s.%s' \
-                % (plotDir, dstPostfix, ergoPlot.figFormat),
-                dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
+ax.legend(fontsize='x-large')
+plt.setp(ax.get_xticklabels(), fontsize=ergoPlot.fs_xticklabels)
+plt.setp(ax.get_yticklabels(), fontsize=ergoPlot.fs_yticklabels)
+ax.set_xlabel(r'$T_E$ (${}^{\circ} C$)', fontsize=ergoPlot.fs_latex)
+ax.set_ylabel(r'$h_W$ (m)', fontsize=ergoPlot.fs_latex)
+fig.savefig('%s/continuation/po/poContOrbit%s.%s' \
+            % (plotDir, dstPostfix, ergoPlot.figFormat),
+            dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
 
     
     

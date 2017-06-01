@@ -10,14 +10,11 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl_extension.hpp>
-#include <libconfig.h++>
 #include <ODESolvers.hpp>
 #include <ODECont.hpp>
 #include <ODEFields.hpp>
 #include "../cfg/readConfig.hpp"
 #include "../cfg/coupledRO.hpp"
-
-using namespace libconfig;
 
 
 void handler(const char *reason, const char *file, int line, int gsl_errno);
@@ -89,7 +86,8 @@ int main(int argc, char * argv[])
   bool foundUnstable;
   gsl_vector_complex *eigValFP = gsl_vector_complex_alloc(dim);
   gsl_complex ev;
-  char fileName[256], srcPostfix[256], dstPostfix[256], contPostfix[256];
+  char fileName[256], srcPostfix[256], dstPostfix[256], dstPostfixFP[256],
+    contPostfix[256];
   FILE *dstStream, *dstStreamExp, *dstStreamVecLeft, *dstStreamVecRight,
     *srcStreamFP, *srcStreamEigValFP;
   gsl_vector_complex *FloquetExp = gsl_vector_complex_alloc(dim);
@@ -111,12 +109,9 @@ int main(int argc, char * argv[])
 
   // Loop over various parameters
   double eta2Step, rStep, gammaStep;
-  //double eta2Min = 0.5; double eta2Max = 0.55; size_t neta2 = 6;
-  double eta2Min = 0.61; double eta2Max = 0.61; size_t neta2 = 1;
-  //double eta2Min = 0.61; double eta2Max = 0.65; size_t neta2 = 5;
-  //double eta2Min = 0.66; double eta2Max = 0.7; size_t neta2 = 5;
-  double rMin = 0.23; double rMax = 0.3; size_t nr = 8;
-  double gammaMin = 0.3; double gammaMax = 0.5; size_t ngamma = 21;
+  double eta2Min = 0.61; double eta2Max = 0.7; size_t neta2 = 10;
+  double rMin = 0.1; double rMax = 0.3; size_t nr = 21;
+  double gammaMin = 0.39; double gammaMax = 0.5; size_t ngamma = 1;
   if (neta2 == 1)
     eta2Step = 0.;
   else
@@ -141,14 +136,11 @@ int main(int argc, char * argv[])
 	try {
 
 	  // Define initial state from fixed point continuation
-	  sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s", srcPostfix,
+	  sprintf(dstPostfixFP, "%s_eta2%04d_r%04d_gamma%04d%s", srcPostfix,
 		  (int) (p["eta2"] * 1000 + 0.1), (int) (p["r"] * 1000 + 0.1),
 		  (int) (p["gamma"] * 1000 + 0.1), contPostfix);
-	  sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s", srcPostfix,
-		  (int) (p["eta2"] * 1000 + 0.1), (int) (p["r"] * 1000 + 0.1),
-		  (int) (p["gamma"] * 1000 + 0.1), contPostfix);
-	  sprintf(fileName, "%s/continuation/fpCont/fpCont%s.%s",
-		  resDir, dstPostfix, fileFormat);
+	  sprintf(fileName, "%s/continuation/fpState/fpState%s.%s",
+		  resDir, dstPostfixFP, fileFormat);
 	  if (!(srcStreamFP = fopen(fileName, "rb"))) {
 	    fprintf(stderr, "Can't open %s for reading eigenvectors: ",
 		    fileName);
@@ -156,7 +148,7 @@ int main(int argc, char * argv[])
 	    return EXIT_FAILURE;
 	  }
 	  sprintf(fileName, "%s/continuation/fpEigVal/fpEigValCont%s.%s",
-		  resDir, dstPostfix, fileFormat);
+		  resDir, dstPostfixFP, fileFormat);
 	  if (!(srcStreamEigValFP = fopen(fileName, "rb"))) {
 	    fprintf(stderr, "Can't open %s for reading eigenvalues: ",
 		    fileName);
@@ -206,7 +198,9 @@ int main(int argc, char * argv[])
 	  // If an unstable complex eigenvalue has been found,
 	  // start the periodic orbit continuation from there.
 	  if (foundUnstable) {
-	    sprintf(fileName, "%s/continuation/poCont/poState%s.%s",
+	    sprintf(dstPostfix, "%s_dt%d", dstPostfixFP,
+		    (int) (round(-gsl_sf_log(dt)/gsl_sf_log(10)) + 0.1));
+	    sprintf(fileName, "%s/continuation/poState/poState%s.%s",
 		    resDir, dstPostfix, fileFormat);
 	    if (!(dstStream = fopen(fileName, "w")))
 	      {
@@ -256,7 +250,7 @@ int main(int argc, char * argv[])
 	      gsl_vector_set(initCont, d, gsl_vector_get(initContFP, d));
 	    // Perturb parameter
 	    gsl_vector_set(initCont, 0, gsl_vector_get(initCont, 0)
-			   * (1 + sqrt(GSL_REAL(ev))));
+			   * (1 + 3 * sqrt(GSL_REAL(ev))));
 	    // Set period from imaginary part of eigenvalue
 	    gsl_vector_set(initCont, dim + 1, 2 * M_PI / GSL_IMAG(ev));
   
@@ -319,14 +313,6 @@ int main(int argc, char * argv[])
 
 	    int predCount = 0;
 	    double contStepAdapt = contStep;
-	    // while ((gsl_vector_get(initCont, dim) >= contMin)
-	    // 	   && (gsl_vector_get(initCont, dim) <= contMax))
-	    //   {
-	    // 	if (predCount >= maxPred) {
-	    // 	  std::cerr << "\nPrediction count exceeding maxPred = "
-	    // 		    << maxPred << std::endl;
-	    // 	  throw std::exception();
-	    // 	}
 	    while (predCount < maxPred)
 	      {
 		// Find periodic orbit
@@ -366,7 +352,7 @@ int main(int argc, char * argv[])
 		}
 		catch(const std::exception &ex) {
 		  std::cout << "Exception: continuation." << std::endl;
-		  if (contStepAdapt < 1.e-4) {
+		  if (contStepAdapt < 1.e-6) {
 		    std::cout << "Time-step already too small.\n"
 			      << std::endl;
 		    delete track;
