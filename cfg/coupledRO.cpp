@@ -21,7 +21,8 @@
  * \param[out] field Vector resulting from the evaluation of the vector field.
  */
 void
-coupledRO::evalField(const gsl_vector *state, gsl_vector *field)
+coupledRO::evalField(const gsl_vector *state, gsl_vector *field,
+		     const double t)
 {
   const double x = gsl_vector_get(state, 0);
   const double y = gsl_vector_get(state, 1);
@@ -49,7 +50,8 @@ coupledRO::evalField(const gsl_vector *state, gsl_vector *field)
  * \param[out] field Vector resulting from the evaluation of the vector field.
  */
 void
-coupledROCont::evalField(const gsl_vector *state, gsl_vector *field)
+coupledROCont::evalField(const gsl_vector *state, gsl_vector *field,
+			 const double t)
 {
   const double x = gsl_vector_get(state, 0);
   const double y = gsl_vector_get(state, 1);

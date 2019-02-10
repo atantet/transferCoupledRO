@@ -2,7 +2,7 @@ import os
 import numpy as np
 import pylibconfig2
 import matplotlib.pyplot as plt
-import ergoPlot
+from ergoPack import ergoPlot
 
 
 pdim = {}

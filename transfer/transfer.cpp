@@ -258,7 +258,7 @@ of membership vecotrs..." << std::endl;
       
   // Get transition matrices as CSR
   std::cout << "Building stationary transfer operator..." << std::endl;
-  transferOp = new transferOperator(gridMemMatrix, N, stationary);
+  transferOp = new transferOperator(gridMemMatrix, N);
 
 
   // Write results
@@ -268,7 +268,7 @@ of membership vecotrs..." << std::endl;
   sprintf(forwardTransitionFileName,
 	  "%s/transfer/forwardTransition/forwardTransition%s.crs%s",
 	  resDir, dstPostfixTau, fileFormat);
-  transferOp->printForwardTransition(forwardTransitionFileName,
+  transferOp->printTransition(forwardTransitionFileName,
 				     fileFormat, "%.12lf");
 
   // Write mask and initial distribution
@@ -282,24 +282,6 @@ of membership vecotrs..." << std::endl;
   transferOp->printInitDist(initDistFileName,
 			    fileFormat, "%.12lf");
       
-  // Write backward transition matrix
-  if (!stationary) {
-    std::cout << "Writing backward transition matrix \
-and final distribution..." << std::endl;
-    sprintf(backwardTransitionFileName,
-	    "%s/transfer/backwardTransition/backwardTransition%s.crs%s",
-	    resDir, dstPostfixTau, fileFormat);
-    transferOp->printBackwardTransition(backwardTransitionFileName,
-					fileFormat, "%.12lf");
-
-    // Write final distribution 
-    sprintf(finalDistFileName,
-	    "%s/transfer/finalDist/finalDist%s.%s",
-	    resDir, dstPostfixTau, fileFormat);
-    transferOp->printFinalDist(finalDistFileName,
-			       fileFormat, "%.12lf");
-  }
-	
   // Free
   delete transferOp;
   gsl_matrix_uint_free(gridMemMatrix);

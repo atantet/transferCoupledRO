@@ -1,8 +1,10 @@
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import pylibconfig2
-import ergoPlot
+from ergoPack import ergoPlot
 sys.path.append('../cfg/')
 from coupledRO import *
 
@@ -72,7 +74,13 @@ postfixTau = "%s_tau%03d" % (postfix, int(tau * 100 + 0.1))
 gridFile = '%s/grid/grid_%s%s.txt' \
            % (cfg.general.resDir, caseName, gridPostfix)
 coord = ergoPlot.readGrid(gridFile, dimObs)
-X, Y = np.meshgrid(coord[0], coord[1])
+xyz = np.zeros((coord[0].shape[0], 3))
+xyz[:, 0] = coord[0]
+xyz[:, 1] = coord[1]
+diag = diagnose(xyz, p)
+X, Y = np.meshgrid(diag['TE'], diag['hW'])
+X, Y = X.T, Y.T
+
 
 # Define file names
 eigValFile = '%s/eigval/eigval%s_nev%d%s.%s' \
@@ -107,7 +115,7 @@ NFilled = np.max(mask[mask < N]) + 1
 
 # Read transfer operator spectrum from file and create a bi-orthonormal basis
 # of eigenvectors and backward eigenvectors:
-print 'Readig spectrum for tau = %.3f...' % tau
+print('Readig spectrum for tau = {:.3f}...'.format(tau))
 if direct == 'Forward':
     (eigVal, eigVec) \
         = ergoPlot.readSpectrum(eigValForwardFile=eigValFile,
@@ -120,36 +128,47 @@ eigVec = eigVec.T
 nev = eigVal.shape[0]
 eigValGen = np.log(eigVal) / (tau * pdim['tadim2year'])
 
-ergoPlot.plotEig(eigValGen, xlabel=realLabel, ylabel=imagLabel,
-                 xlim=xlimEig, ylim=ylimEig)
-# plt.savefig('%s/spectrum/eigVal/eigVal%s.%s'\
-#             % (cfg.general.plotDir, postfix, ergoPlot.figFormat),
-#             dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
-
+# Sort
+isort = np.argsort(-np.abs(eigVal))
+eigVal = eigVal[isort]
+eigVec = eigVec[:, isort]
 
 # Plot eigenvectors of transfer operator
 alpha = 0.0
 ss = 4
 os.system('mkdir %s/spectrum/eigvec 2> /dev/null' % cfg.general.plotDir)
 #eigVec *= -1.
-eigVec[:, 0]  /= eigVec[:, 0].sum()
-for ev in np.arange(cfg.spectrum.nEigVecPlot):
+# eigVec[:, 0]  /= eigVec[:, 0].sum()
+ampMin = 0.
+ampMax = 0.020
+# nlevAmp = int((ampMax - ampMin) * 100 + 0.1) + 1
+nlevAmp = 11
+# csfilter = 0.
+csfilter = 1
+csfmt = '%1.1f'
+# for ev in np.arange(cfg.spectrum.nEigVecPlot):
+for ev in np.arange(1, cfg.spectrum.nEigVecPlot):
     if ev == 0:
         cmap = cm.hot_r
         positive=True
-        plotcbar=False
     else:
         cmap = cm.RdBu_r
         positive=False
-        plotcbar=True
-    vec = eigVec[:, ev].real
-    if (initDist is not None) and (ev == 0):
-        vec *= initDist
-        
-    print 'Plotting real part of eigenvector %d...' % (ev + 1,)
-    ergoPlot.plot2D(X, Y, vec, mask, xlabel=ev_xlabel, ylabel=ev_ylabel,
-                    alpha=alpha, cmap=cmap, positive=(ev == 0))
+    print('Plotting eigenvector {:d}...'.format(ev + 1))
+    # vec = eigVec[:, ev].real
+    vec = eigVec[:, ev]
+    # if (initDist is not None) and (ev == 0):
+    #     vec *= initDist
+    # ergoPlot.plotEigVec(X, Y, vec, mask, xlabel=ev_xlabel, ylabel=ev_ylabel,
+    #                     alpha=alpha, cmap=cmap, positive=(ev == 0))
+    # #, xlim=xlimEV, ylim=ylimEV)
+    # dstFile = '%s/spectrum/eigvec/eigvec%sReal_ev%03d%s.%s' \
+    #           % (cfg.general.plotDir, direct, ev + 1, postfixTau, figFormat)
+    ergoPlot.plotEigVecPolarCombine(X, Y, vec, mask,
+                                    xlabel=ev_xlabel, ylabel=ev_ylabel,
+                                    alpha=alpha, cmap=cmap, csfmt=csfmt,
+                                    ampMin=ampMin, ampMax=ampMax, nlevAmp=nlevAmp)
     #, xlim=xlimEV, ylim=ylimEV)
-    dstFile = '%s/spectrum/eigvec/eigvec%sReal_ev%03d%s.%s' \
+    dstFile = '%s/spectrum/eigvec/eigvec%sPolar_ev%03d%s.%s' \
               % (cfg.general.plotDir, direct, ev + 1, postfixTau, figFormat)
     plt.savefig(dstFile, bbox_inches=ergoPlot.bbox_inches, dpi=ergoPlot.dpi)

@@ -93,9 +93,10 @@ int main(int argc, char * argv[])
   double exp = gsl_sf_log(contAbs)/gsl_sf_log(10);
   double mantis = sign * gsl_sf_exp(gsl_sf_log(contAbs) / exp);
   sprintf(srcPostfix, "_%s", caseName);
-  sprintf(dstPostfix, "%s_eta2%03d_r%03d_gamma%03d_cont%04d_contStep%de%d",
-	  srcPostfix, (int) (p["eta2"] * 100 + 0.1),
+  sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d_tauExt%04d_cont%04d_contStep%de%d",
+	  srcPostfix, (int) (p["eta2"] * 1000 + 0.1),
 	  (int) (p["r"] * 1000 + 0.1), (int) (p["gamma"] * 1000 + 0.1),
+	  (int) (p["tauExt"] * 1000 + 0.1),
 	  (int) (gsl_vector_get(initCont, dim) * 1000 + 0.1),
 	  (int) (mantis*1.01), (int) (exp*1.01));
   sprintf(dstFileName, "%s/continuation/fpState/fpState%s.%s",

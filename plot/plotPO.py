@@ -1,9 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 import sys
 sys.path.append('../cfg/')
 from coupledRO import *
-from ergoInt import *
+from ergoPack.ergoInt import *
 
 p["eta2"] = 0.6
 p["r"] = 0.17
@@ -24,7 +25,7 @@ lsStable = ['--', '-']
 lw = 2
 color = 'k'
 msize = 30
-cCycle = matplotlib.rcParams['axes.color_cycle']
+cCycle = [v['color'] for v in rcParams['axes.prop_cycle']]
 if plotImag:
     fig = plt.figure(figsize=(6, 9))
 else:
@@ -59,19 +60,18 @@ for k in np.arange(nCont):
     exp = np.log10(contAbs)
     mantis = sign * np.exp(np.log(contAbs) / exp)
     contPostfix = "_cont%04d_contStep%de%d" \
-                  % (int(initCont * 1000 + 0.1), int(mantis*1.01),
-                     (int(exp*1.01)))
+        % (int(initCont * 1000 + 0.1), int(mantis*1.01), (int(exp*1.01)))
     dstPostfixFP = "%s_eta2%04d_r%04d_gamma%04d%s" \
-                 % (srcPostfix, int(p["eta2"] * 1000 + 0.1),
-                    int(p["r"] * 1000 + 0.1),
-                    int(p["gamma"] * 1000 + 0.1), contPostfix)
+        % (srcPostfix, int(p["eta2"] * 1000 + 0.1),
+           int(p["r"] * 1000 + 0.1),
+           int(p["gamma"] * 1000 + 0.1), contPostfix)
     dstPostfix = "%s_dt%d" \
-                 % (dstPostfixFP,
-                    int(np.round(-np.log10(cfg.simulation.dt)) + 0.1))
+        % (dstPostfixFP,
+           int(np.round(-np.log10(cfg.simulation.dt)) + 0.1))
     poFileName = '%s/poState/poState%s.%s' % (contDir, dstPostfix, fileFormat)
     FloquetExpFileName = '%s/poExp/poExp%s.%s' \
-                         % (contDir, dstPostfix, fileFormat)
-
+        % (contDir, dstPostfix, fileFormat)
+    
         
     # Read fixed point and cont
     state = readFile(poFileName)
@@ -83,14 +83,14 @@ for k in np.arange(nCont):
     # Remove nans
     FloquetExp[np.isnan(FloquetExp)] \
         = np.min(FloquetExp.real[~np.isnan(FloquetExp)])
-
+    
     po = state[:, :dim]
     TRng = state[:, dim+1]
     contRng = state[:, dim]
     # Convert to relaxation rate in years
     TDimRng = TRng * pdim['tadim2year']
     FloquetExp /= pdim['tadim2year']
-
+    
     # Reorder Floquet exp
     isort = np.argsort(-FloquetExp[0].real)
     FloquetExp[0] = FloquetExp[0, isort]
@@ -211,13 +211,13 @@ for k in np.arange(nCont):
         T = TRng[icontSel]
         x0 = po[icontSel]
         FE = FloquetExp[icontSel]
-        print 'Propagating orbit of period ', T, ' at mu = ', cont, \
-            ' from x(0) = ', x0
-        print 'Floquet = ', FE
-
+        print('Propagating orbit of period ', T, ' at mu = ', cont,
+              ' from x(0) = ', x0)
+        print('Floquet = ', FE)
+        
         # Adapt time step
-	ntOrbit = int(np.ceil(T / cfg.simulation.dt) + 0.1)
-	dtOrbit = T / ntOrbit
+        ntOrbit = int(np.ceil(T / cfg.simulation.dt) + 0.1)
+        dtOrbit = T / ntOrbit
         # propagate
         p['mu'] = cont
         xt = propagate(x0, fieldRO2D, p, stepRK4, dtOrbit, ntOrbit)
@@ -244,15 +244,16 @@ for k in np.arange(nCont):
                    marker='o')
         ic += 1
 
-        # Last one
-    t = -400
+    # Last one
+    # t = -400
+    t = -1
     cont = contRng[t]
     T = TRng[t]
     x0 = po[t]
     FE = FloquetExp[t]
-    print 'Propagating orbit of period ', T, ' at mu = ', cont, \
-        ' from x(0) = ', x0
-    print 'Floquet = ', FE
+    print('Propagating orbit of period ', T, ' at mu = ', cont,
+          ' from x(0) = ', x0)
+    print('Floquet = ', FE)
     # Adapt time step
     ntOrbit = int(np.ceil(T / cfg.simulation.dt) + 0.1)
     dtOrbit = T / ntOrbit
@@ -287,6 +288,3 @@ ax.set_ylabel(r'$h_W$ (m)', fontsize=ergoPlot.fs_latex)
 fig.savefig('%s/continuation/po/poContOrbit%s.%s' \
             % (plotDir, dstPostfix, ergoPlot.figFormat),
             dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
-
-    
-    

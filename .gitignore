@@ -7,3 +7,5 @@
 
 # data and results
 results/*
+
+__pycache__

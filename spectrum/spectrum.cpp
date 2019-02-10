@@ -80,7 +80,7 @@ int main(int argc, char * argv[])
   // Declarations
   // Transfer
   char forwardTransitionFileName[256], initDistFileName[256],
-    backwardTransitionFileName[256], finalDistFileName[256],
+    backwardTransitionFileName[256],
     maskFileName[256], srcPostfixSim[256], postfix[256], postfixTau[256];
   transferOperator *transferOp;
   gsl_vector *initDist, *finalDist;
@@ -134,13 +134,13 @@ _sigmahInf2%03d_L%d_spinup%d_dt%d_samp%d", caseName,
     {
       /** Construct transfer operator without allocating memory
 	  to the distributions (only to the mask) ! */
-      transferOp = new transferOperator(N, stationary);
+      transferOp = new transferOperator(N);
 	    
       // Scan forward transition matrix (this sets NFilled)
       std::cout << "Scanning forward transition matrix from "
 		<< forwardTransitionFileName << std::endl;
-      transferOp->scanForwardTransition(forwardTransitionFileName,
-					fileFormat);
+      transferOp->scanTransition(forwardTransitionFileName,
+				 fileFormat);
 
       // Scan mask for the first lag
       sprintf(maskFileName, "%s/transfer/mask/mask%s.%s",
@@ -168,28 +168,6 @@ _sigmahInf2%03d_L%d_spinup%d_dt%d_samp%d", caseName,
       std::cout << "Nfilled = " << transferOp->getNFilled() << std::endl;
       initDist = gsl_vector_alloc(transferOp->getNFilled());
       gsl_vector_memcpy(initDist, transferOp->initDist);
-	  
-      if (!stationary)
-	{
-	  // Scan backward transition matrix
-	  std::cout << "Scanning backward transition matrix from "
-		    << backwardTransitionFileName << std::endl;
-	  transferOp->scanBackwardTransition(backwardTransitionFileName,
-					     fileFormat);
-      
-	  // Only scan final distribution for the first lag
-	  sprintf(finalDistFileName,
-		  "%s/transfer/finalDist/finalDist%s.%s",
-		  resDir, postfixTau, fileFormat);
-	  std::cout << "Scanning final distribution from "
-		    << finalDistFileName << std::endl;
-	  transferOp->scanFinalDist(finalDistFileName,
-				    fileFormat);
-      
-	  // Save final distribution
-	  finalDist = gsl_vector_alloc(transferOp->getNFilled());
-	  gsl_vector_memcpy(finalDist, transferOp->finalDist);
-	}
     }
   catch (std::exception &ex)
     {
@@ -203,7 +181,7 @@ _sigmahInf2%03d_L%d_spinup%d_dt%d_samp%d", caseName,
   try
     {
       // Solve eigen value problem with default configuration
-      transferSpec = new transferSpectrum(nev, transferOp, config);
+      transferSpec = new transferSpectrum(nev, transferOp, &config);
 
       if (getForwardEigenvectors)
 	{

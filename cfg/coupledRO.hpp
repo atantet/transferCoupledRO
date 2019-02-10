@@ -34,7 +34,8 @@ public:
 
   /** \brief Evaluate the vector field of the coupled recharge oscillator
    *  for a given state. */
-  void evalField(const gsl_vector *state, gsl_vector *field);
+  void evalField(const gsl_vector *state, gsl_vector *field,
+		 const double t=0.);
 };
 
 
@@ -54,7 +55,8 @@ public:
 
   /** \brief Evaluate the vector field of the coupled recharge oscillator
    *  for a given state. */
-  void evalField(const gsl_vector *state, gsl_vector *field);
+  void evalField(const gsl_vector *state, gsl_vector *field,
+		 const double t=0.);
 };
 
 
@@ -99,6 +101,24 @@ public:
 
   /** \brief Update the matrix of the linear operator after the state. */
   void setMatrix(const gsl_vector *x);
+};
+
+
+/** \brief Vector field for the recharge oscillator with seasonal cycle.
+ *
+ *  Vector field for the coupled recharge oscillator with a seasonal cycle.
+ */
+class coupledROPeriodic : public vectorField {
+public:
+  /** \brief Constructor defining the model parameters. */
+  coupledROPeriodic(const param *p_) : vectorField(p_) { }
+
+  /** \brief Destructor. */
+  ~coupledROPeriodic() { }
+
+  /** \brief Evaluate the vector field of the coupled recharge oscillator
+   *  for a given state. */
+  void evalField(const gsl_vector *state, gsl_vector *field, const double t);
 };
 
 

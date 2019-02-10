@@ -1,9 +1,18 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.path.append('../cfg/')
+sys.path.append('/Users/tantet/Pro/dev/Climate/Transfer/transferCoupledRO/cfg/')
 from coupledRO import *
-from ergoInt import *
+from ergoPack.ergoInt import *
+from ergoPack import ergoPlot
+
+# Reload modules with execution of any code, to avoid having to restart
+# the kernel after editing timeseries_scripts
+try:
+    get_ipython().run_line_magic('load_ext', 'autoreload')
+    get_ipython().run_line_magic('autoreload', '2')
+except NameError:
+    pass
 
 p["eta2"] = 0.6
 p["r"] = 0.17
@@ -51,10 +60,10 @@ for k in np.arange(nCont):
     contPostfix = "_cont%04d_contStep%de%d" \
                   % (int(initCont * 1000 + 0.1), int(mantis*1.01),
                      (int(exp*1.01)))
-    dstPostfix = "%s_eta2%04d_r%04d_gamma%04d%s" \
+    dstPostfix = "%s_eta2%04d_r%04d_gamma%04d_tauExt%04d%s" \
                  % (srcPostfix, int(p["eta2"] * 1000 + 0.1),
                     int(p["r"] * 1000 + 0.1), int(p["gamma"] * 1000 + 0.1),
-                    contPostfix)
+                    int(p["tauExt"] * 1000 + 0.1), contPostfix)
     fpFileName = '%s/fpState/fpState%s.%s' % (contDir, dstPostfix, fileFormat)
     eigValFileName = '%s/fpEigVal/fpEigValCont%s.%s' \
                      % (contDir, dstPostfix, fileFormat)
@@ -82,9 +91,9 @@ for k in np.arange(nCont):
     
     isStable = np.max(eigVal.real, 1) < 0
     change = np.nonzero(isStable[1:] ^ isStable[:-1])[0] + 1
-    print 'Change of stability at cont = ', contRng[change]
-    print 'Fixed point at change of instability: ', fp[change]
-    print 'Characteristic exponents at instability: ', eigVal[change]
+    print('Change of stability at cont = ', contRng[change])
+    print('Fixed point at change of instability: ', fp[change])
+    print('Characteristic exponents at instability: ', eigVal[change])
 
     # Diagnose
     pRng = []
@@ -131,3 +140,4 @@ ax[-1].set_xlabel(r'$\rho$', fontsize=ergoPlot.fs_latex)
 fig.savefig('%s/continuation/fp/fpCont%s.%s' \
             % (plotDir, dstPostfix, ergoPlot.figFormat),
             dpi=ergoPlot.dpi, bbox_inches=ergoPlot.bbox_inches)
+

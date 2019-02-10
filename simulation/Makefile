@@ -1,5 +1,5 @@
-INCDIR=-I$(HOME)/local/include/
-LIBDIR=-L$(HOME)/local/lib/
+INCDIR=-I$(HOME)/.local/include/
+LIBDIR=-L$(HOME)/.local/lib/
 LIBS=-lgsl -lgslcblas -lconfig++ -lergopack -lgomp -lgslcblas
 CONFIG=../cfg/readConfig
 MODEL=../cfg/coupledRO

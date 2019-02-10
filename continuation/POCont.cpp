@@ -92,9 +92,10 @@ int main(int argc, char * argv[])
   sprintf(srcPostfix, "_%s", caseName);
   sprintf(contPostfix, "_cont%04d_contStep%de%d", 0,
 	  (int) (mantis*1.01), (int) (exp*1.01));
-  sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d%s_dt%d", srcPostfix,
+  sprintf(dstPostfix, "%s_eta2%04d_r%04d_gamma%04d_tauExt%04d%s_dt%d", srcPostfix,
 	  (int) (p["eta2"] * 1000 + 0.1), (int) (p["r"] * 1000 + 0.1),
-	  (int) (p["gamma"] * 1000 + 0.1), contPostfix,
+	  (int) (p["gamma"] * 1000 + 0.1), (int) (p["tauExt"] * 1000 + 0.1),
+	  contPostfix,
 	  (int) (round(-gsl_sf_log(dt)/gsl_sf_log(10)) + 0.1));
   
   sprintf(fileName, "%s/continuation/poState/poState%s.%s",
