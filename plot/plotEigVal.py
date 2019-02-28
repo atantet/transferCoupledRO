@@ -2,7 +2,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pylibconfig2
-import ergoPlot
+from ergoPack import ergoPlot
+from coupledRO import *
 
 #ergoPlot.dpi = 2000
 
@@ -15,9 +16,8 @@ spinup = cfg.simulation.spinup
 tau = cfg.transfer.tauRng[0]
 printStepNum = int(cfg.simulation.printStep / cfg.simulation.dt + 0.1)
 caseName = cfg.model.caseName
-rho = cfg.model.rho
 dim = cfg.model.dim
-dimObs = dim
+dimObs = len(cfg.observable.components)
 nProc = ''
 if (hasattr(cfg.sprinkle, 'nProc')):
     nProc = '_nProc' + str(cfg.sprinkle.nProc)
@@ -25,10 +25,11 @@ if (hasattr(cfg.sprinkle, 'nProc')):
 N = np.prod(np.array(cfg.grid.nx))
 gridPostfix = ""
 for d in np.arange(dimObs):
-    if (hasattr(cfg.grid, 'nSTDLow') & hasattr(cfg.grid, 'nSTDHigh')):
+    if (hasattr(cfg.grid, 'gridLimitsLow')
+        & hasattr(cfg.grid, 'gridLimitsHigh')):
         gridPostfix = "%s_n%dl%dh%d" % (gridPostfix, cfg.grid.nx[d],
-                                        cfg.grid.nSTDLow[d],
-                                        cfg.grid.nSTDHigh[d])
+                                        cfg.grid.gridLimitsLow[d],
+                                        cfg.grid.gridLimitsHigh[d])
     else:
         gridPostfix = "%s_n%dl%dh%d" % (gridPostfix, cfg.grid.nx[d],
                                         cfg.sprinkle.minInitState[d],
@@ -46,14 +47,12 @@ realLabel = r'$\Re(\lambda_k)$'
 imagLabel = r'$\Im(\lambda_k)$'
 
 
-muRng = np.arange(0.8, 1.041, 0.2)
-for imu in np.arange(muRng.shape[0]):
-    mu = muRng[imu]
-
+muRng = np.arange(0.6, 1.21, 0.06)
+for imu, mu in enumerate(muRng) :
     srcPostfixSim = "_%s_mu%03d_eta2%03d_gamma%03d_r%03d_sigmahInf2%03d\
-    _L%d_spinup%d_dt%d_samp%d" \
-    % (caseName, int(p["mu"] * 100 + 0.1),
-       int(p["eta2"] * 1000 + 0.1), int(p["gamma"] * 1000 + 0.1),
+_L%d_spinup%d_dt%d_samp%d" \
+    % (caseName, int(mu * 100 + 0.1),
+       int(p['eta2'] * 1000 + 0.1), int(p["gamma"] * 1000 + 0.1),
        int(p["r"] * 1000 + 0.1),
        int(p["sigmahInf2"] * 1000 + 0.1), int(L + 0.1),
        int(spinup + 0.1),
@@ -68,7 +67,7 @@ for imu in np.arange(muRng.shape[0]):
                         % (cfg.general.specDir, cfg.spectrum.nev, postfixTau,
                            cfg.general.fileFormat)
 
-    print 'Readig spectrum for tau = %.3f...' % tau
+    print('Readig spectrum for mu = {:.2f}...'.format(mu))
     (eigValForward,) = readSpec(eigValForwardFile)
 
     # Get generator eigenvalues (using the complex logarithm)
@@ -76,7 +75,7 @@ for imu in np.arange(muRng.shape[0]):
 
     ergoPlot.plotEig(eigValGen, xlabel=realLabel, ylabel=imagLabel,
                      xlim=xlimEig, ylim=ylimEig)
-    plt.text(xlimEig[0]*0.2, ylimEig[1]*1.05, r'$\rho = %.1f$' % rho,
+    plt.text(xlimEig[0]*0.2, ylimEig[1]*1.05, r'$\mu = {:.2f}$'.format(mu),
              fontsize=ergoPlot.fs_latex)
     plt.savefig('%s/spectrum/eigVal/eigVal%s.%s'\
                 % (cfg.general.plotDir, postfixTau, ergoPlot.figFormat),
