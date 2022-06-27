@@ -103,7 +103,7 @@ alpha = 0.0
 ss = 4
 os.system('mkdir %s/spectrum/eigvec 2> /dev/null' % cfg.general.plotDir)
 ampMin = 0.
-ampMax = 0.020
+ampMax = None
 # nlevAmp = int((ampMax - ampMin) * 100 + 0.1) + 1
 nlevAmp = 11
 # csfilter = 0.
@@ -111,9 +111,11 @@ csfilter = 1
 csfmt = '%1.1f'
 lw = 2
 msize = 30
-for mu in np.arange(0.6, 1.05, 0.02):
+# for mu in np.arange(0.6, 1.05, 0.02):
+for mu in np.arange(0.6, 1.21, 0.06):
     print('mu: {:.2f}'.format(mu))
     icontFP = np.argmin(np.abs(contRngFP - mu))
+    p['mu'] = contRngFP[icontFP]
     diagFP = diagnose(np.expand_dims(fp[icontFP], axis=0), p)
     # diagFP = {list(diagFP.keys())[k]: list(diagFP.values())[k][0]
     #           for k in range(len(diagFP))}
@@ -123,6 +125,7 @@ for mu in np.arange(0.6, 1.05, 0.02):
     dCont = np.abs(contRngPO - mu)
     icontPO = np.argmin(dCont)
     if np.abs(dCont[icontPO]) < 0.02:
+        p['mu'] = contRngPO[icontPO]
         x0 = po[icontPO]
         T = TRng[icontPO]
         ntOrbit = int(np.ceil(T / cfg.simulation.dt) + 0.1)
@@ -167,7 +170,6 @@ _L%d_spinup%d_dt%d_samp%d" \
 
     # Read transfer operator spectrum from file and create a bi-orthonormal basis
     # of eigenvectors and backward eigenvectors:
-    print('Readig spectrum for tau = {:.3f}...'.format(tau))
     if direct == 'Forward':
         (eigVal, eigVec) \
             = ergoPlot.readSpectrum(eigValForwardFile=eigValFile,
@@ -186,17 +188,19 @@ _L%d_spinup%d_dt%d_samp%d" \
     eigVec = eigVec[:, isort]
 
     # Plot eigenvectors of transfer operator
-    # for ev in np.arange(cfg.spectrum.nEigVecPlot):
     for ev in np.arange(1, cfg.spectrum.nEigVecPlot):
         print('\tPlotting eigenvector {:d}...'.format(ev + 1))
         cmap = cm.hot_r if ev == 0 else cm.RdBu_r
-        vec = eigVec[:, ev]
+        v0 = eigVec[:, 0] / eigVec[:, 0].sum()
+        vec = eigVec[:, ev] # / v0
+        # vec /= np.max(np.abs(vec))
         ergoPlot.plotEigVecPolarCombine(X, Y, vec, mask,
                                         xlabel=ev_xlabel, ylabel=ev_ylabel,
                                         alpha=alpha, cmap=cmap, csfmt=csfmt,
                                         ampMin=ampMin, ampMax=ampMax, nlevAmp=nlevAmp)
         if plotPO:
-            plt.plot(diagPO['TE'], diagPO['hW'], linestyle='-', linewidth=lw, color='k')
+            plt.plot(diagPO['TE'], diagPO['hW'], linestyle='-',
+                     linewidth=lw, color='k')
         plt.scatter(diagFP['TE'], diagFP['hW'], s=msize,
                     c='k', edgecolor='face', marker='o')
 
