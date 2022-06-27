@@ -8,4 +8,7 @@
 # data and results
 results/*
 
+# Compilation
+*.out
+
 __pycache__
